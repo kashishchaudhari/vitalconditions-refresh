@@ -84,8 +84,8 @@ confirmed before anyone relies on it.
 
 | Item | Status | Evidence |
 |---|---|---|
-| Legacy vintage of each indicator | **Assumed** | Taken from the project brief (housing and economy indicators on 2021 data; Child Housing Cost Burden on 2015-2019 PUMS). Each registry entry records `verified: false` until someone checks the live legacy page. |
-| `config/legacy_reference.csv` | Empty (headers + TODO) | No published figures were captured. The legacy check reports this as a **warning**, not a pass. |
+| Previously published vintage of each indicator | **Verified 2026-11-23** for 7 indicators | https://forsythfutures.org/economy-and-financial-stability/ shows 2021 ACS 1-year for homeownership (B25003), tenure by age (B25007), median income (S1903/B19013), employment (S2301), poverty (S1701) and housing burden (1-year PUMS). https://forsythfamilypower.org/community-data/ shows "Child/Youth Housing Cost Burden (2015-19)". Income quintiles and vehicle access were not found and are marked unknown. |
+| `config/legacy_reference.csv` | 5 published figures entered | 2021 homeownership (White non-Hispanic 74%, Black 48%, Hispanic/Latino 51%), median household income ($59,879) and under-18 poverty (20%). The refresh reproduces all five within 1% (median income exactly). |
 
 ## Design choices that go beyond the spec
 

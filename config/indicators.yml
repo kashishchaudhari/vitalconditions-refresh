@@ -51,11 +51,12 @@ indicators:
     universe: Occupied housing units (households)
     disaggregations: [race_ethnicity, tenure]
     legacy_vintage:
-      label: "2021 ACS"
+      label: "2021 ACS 1-year"
       year: 2021
       survey: acs1
-      verified: false
-      basis: Assumed from the project brief; not yet checked against the published pages.
+      verified: true
+      basis: >-
+        Confirmed 2026-11-23 on https://forsythfutures.org/economy-and-financial-stability/ (Homeownership; B25003 and B25003B/H/I, 2021 ACS 1-year).
     groups:
       - {group: "All households",                               table: B25003}
       - {group: "White alone",                                  table: B25003A}
@@ -109,11 +110,12 @@ indicators:
     universe: Households
     disaggregations: [race_ethnicity]
     legacy_vintage:
-      label: "2021 ACS"
+      label: "2021 ACS 1-year"
       year: 2021
       survey: acs1
-      verified: false
-      basis: Assumed from the project brief; not yet checked against the published pages.
+      verified: true
+      basis: >-
+        Confirmed 2026-11-23 on https://forsythfutures.org/economy-and-financial-stability/ (Median Income; S1903/B19013, 2021 ACS 1-year).
     # B19013 holds the same medians as subject table S1903, but its variable
     # numbers never changed. S1903 moved medians from column C02 to C03 in 2017.
     groups:
@@ -151,11 +153,12 @@ indicators:
     universe: Households
     disaggregations: []
     legacy_vintage:
-      label: "2021 ACS"
-      year: 2021
-      survey: acs1
+      label: "unknown"
+      year: null
+      survey: null
       verified: false
-      basis: Assumed from the project brief; not yet checked against the published pages.
+      basis: >-
+        Not found on the published pages checked on 2026-11-23.
     groups:
       - {group: "All households", table: B19080}
     components:
@@ -187,11 +190,12 @@ indicators:
     universe: Occupied housing units (households)
     disaggregations: [age, tenure]
     legacy_vintage:
-      label: "2021 ACS"
+      label: "2021 ACS 1-year"
       year: 2021
       survey: acs1
-      verified: false
-      basis: Assumed from the project brief; not yet checked against the published pages.
+      verified: true
+      basis: >-
+        Confirmed 2026-11-23 on https://forsythfutures.org/economy-and-financial-stability/ (sources list B25007, 2021 ACS 1-year).
     groups:
       - {group: "All ages",                    table: B25007, components: {owner: ["002"], renter: ["012"], total: ["001"]}}
       - {group: "Householder under 25 (15 to 24)", table: B25007, components: {owner: ["003"], renter: ["013"], total: ["003", "013"]}}
@@ -242,11 +246,12 @@ indicators:
     universe: Population 16 years and over (sex and parent groups are ages 20 to 64)
     disaggregations: [race_ethnicity, sex]
     legacy_vintage:
-      label: "2021 ACS"
+      label: "2021 ACS 1-year (employment rate)"
       year: 2021
       survey: acs1
-      verified: false
-      basis: Assumed from the project brief; not yet checked against the published pages.
+      verified: true
+      basis: >-
+        Confirmed 2026-11-23 on https://forsythfutures.org/economy-and-financial-stability/ (Employment; S2301, 2021 ACS 1-year). The published page reports the employment rate.
     groups:
       - {group: "All people 16 and over",                         table: S2301, components: {lfpr: ["C02_001"], epop: ["C03_001"], unemp: ["C04_001"]}}
       - {group: "White alone",                                    table: S2301, components: {lfpr: ["C02_012"], epop: ["C03_012"], unemp: ["C04_012"]}}
@@ -281,11 +286,12 @@ indicators:
     universe: Renter- and owner-occupied housing units where cost as a share of income can be computed
     disaggregations: [tenure]
     legacy_vintage:
-      label: "2021 ACS"
+      label: "2021 ACS 1-year PUMS"
       year: 2021
       survey: acs1
-      verified: false
-      basis: Assumed from the project brief; not yet checked against the published pages.
+      verified: true
+      basis: >-
+        Confirmed 2026-11-23 on https://forsythfutures.org/economy-and-financial-stability/ (Housing Burden; 1-year PUMS 2007-2019 and 2021, all households). This refresh uses published tables B25070/B25091 split by tenure, a different method.
     groups:
       - group: "Renter households"
         table: B25070
@@ -346,7 +352,8 @@ indicators:
       year: null
       survey: null
       verified: false
-      basis: Not known.
+      basis: >-
+        Not found on the published pages checked on 2026-11-23.
     groups:
       - {group: "All households", table: B08201}
     components:
@@ -368,11 +375,12 @@ indicators:
     universe: People for whom poverty status is determined
     disaggregations: [race_ethnicity, age]
     legacy_vintage:
-      label: "unknown"
-      year: null
-      survey: null
-      verified: false
-      basis: Not known.
+      label: "2021 ACS 1-year"
+      year: 2021
+      survey: acs1
+      verified: true
+      basis: >-
+        Confirmed 2026-11-23 on https://forsythfutures.org/economy-and-financial-stability/ (Poverty; S1701, 2021 ACS 1-year). This refresh uses B17001, which has the same universe.
     groups:
       - {group: "All people",                                   table: B17001}
       - {group: "White alone",                                  table: B17001A}
@@ -499,5 +507,12 @@ indicators:
     geographies: [puma]
     universe: Children under 18 in households
     disaggregations: [race_ethnicity, tenure]
-    legacy_vintage: {label: "2015-2019 ACS 5-year PUMS", year: 2019, survey: acs5, verified: false, basis: "Assumed from the project brief; not yet checked"}
+    legacy_vintage:
+      label: "2015-2019 ACS 5-year PUMS"
+      year: 2019
+      survey: acs5
+      verified: true
+      basis: >-
+        Confirmed 2026-11-23 on https://forsythfamilypower.org/community-data/
+        (chart "Child/Youth Housing Cost Burden (2015-19)", ACS PUMS).
     notes: Built from PUMS microdata with replicate weights (milestone 3). The three PUMAs together cover exactly Forsyth County.

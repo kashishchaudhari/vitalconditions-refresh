@@ -10,7 +10,7 @@ A reproducible R pipeline that refreshes public indicators for Forsyth County, N
 
 ## Status
 
-All six planned milestones are built: 10 ACS indicators plus one PUMS indicator across five Vital Conditions, a tract-level childcare and housing affordability module, a blocking validation stage, a Quarto report and website, and a GitHub Actions workflow. Two things are still open: the **childcare supply data is a SAMPLE placeholder** (see [`data/childcare/README.md`](data/childcare/README.md)), and previously published reference figures have not been entered. [`docs/assumptions.md`](docs/assumptions.md) lists what was verified and what was assumed.
+All six planned milestones are built: 10 ACS indicators plus one PUMS indicator across five Vital Conditions, a tract-level childcare and housing affordability module, a blocking validation stage, a Quarto report and website, and a GitHub Actions workflow. Still open: the **childcare supply data is a SAMPLE placeholder** (see [`data/childcare/README.md`](data/childcare/README.md)), and only five previously published figures have been entered as references so far (all five are reproduced within 1%). [`docs/assumptions.md`](docs/assumptions.md) lists what was verified and what was assumed.
 
 | Vital Condition | Indicators |
 |---|---|
@@ -97,7 +97,7 @@ Run `targets::tar_make()` after each Census release: 1-year data comes out each 
 - **PUMS benchmark:** weighted PUMS totals (persons, households, children) match the published ACS totals for the same PUMAs within ±2%.
 - **Geometry:** the tract GeoJSON is valid, in EPSG:4326, has every tract once, and joins 1:1 to the tract CSV. Facility points fall inside the county.
 - **Newest data:** every indicator reaches the newest available vintage.
-- **Comparison with published figures** (warnings only): against figures already published by Forsyth Futures, listed in `config/legacy_reference.csv`. This file is empty for now (TODO).
+- **Comparison with published figures** (warnings only): against figures already published by Forsyth Futures, listed in `config/legacy_reference.csv` with source URLs. All five entered so far (2021 homeownership by race, median household income, child poverty) are reproduced within 1%.
 
 Any **fail** stops `tar_make()` with an error. Tolerances are in `config/validation.yml`.
 
