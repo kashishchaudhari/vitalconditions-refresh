@@ -29,3 +29,9 @@ data/raw/
 .DS_Store
 Thumbs.db
 .vscode/
+
+# Generated outputs (rebuilt by tar_make / CI; published via the site)
+outputs/tableau/*
+outputs/validation/*
+outputs/geo/*
+!outputs/**/.gitkeep

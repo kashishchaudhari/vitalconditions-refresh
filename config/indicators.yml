@@ -1,0 +1,175 @@
+# Indicator registry
+# ------------------
+# One entry per indicator. The pipeline builds, validates and exports every
+# entry with `status: active`. Entries with `status: planned` are documented
+# here but not built yet.
+#
+# To add a new ACS indicator, copy an active entry and change:
+#   id, name, vital_condition, universe, groups (one ACS table per group),
+#   components (the variable numbers inside each table) and measures.
+# Validation checks (completeness, source match, re-pull, recomputation of
+# percentages, numerator <= denominator, and any `checks` you list) are
+# generated automatically from the entry.
+#
+# Fields
+#   id               short machine name, lowercase_with_underscores
+#   name             plain-language name shown to readers
+#   vital_condition  one of the Seven Vital Conditions
+#   source           acs (detailed/subject tables) or pums
+#   surveys          acs1 (1-year, county) and/or acs5 (5-year)
+#   geographies      county and/or tract (tract uses acs5, latest vintage only)
+#   universe         who or what is counted
+#   disaggregations  what the groups break the data down by
+#   legacy_vintage   what the legacy site currently shows
+#   groups           list of {group, table}; the table holds that group's data
+#   components       name -> variable number(s) in each group's table; several
+#                    numbers are summed (MOE combined with moe_sum)
+#   measures         what is published: type count (one component) or
+#                    percent (numerator / denominator components x 100)
+#   checks           optional internal-consistency checks
+#   notes            anything a reader should know
+
+indicators:
+
+  - id: homeownership_by_race
+    status: active
+    name: Homeownership by race and ethnicity
+    vital_condition: Humane Housing
+    source: acs
+    surveys: [acs1, acs5]
+    geographies: [county, tract]
+    universe: Occupied housing units (households)
+    disaggregations: [race_ethnicity, tenure]
+    legacy_vintage:
+      label: "2021 ACS"
+      year: 2021
+      survey: acs1
+      verified: false
+      basis: >-
+        BUILD_PROMPT.md says the legacy economy and housing tables stop at
+        2021. Not yet checked against the live legacy page.
+    groups:
+      - {group: "All households",                               table: B25003}
+      - {group: "White alone",                                  table: B25003A}
+      - {group: "Black or African American alone",              table: B25003B}
+      - {group: "American Indian and Alaska Native alone",      table: B25003C}
+      - {group: "Asian alone",                                  table: B25003D}
+      - {group: "Native Hawaiian and Other Pacific Islander alone", table: B25003E}
+      - {group: "Some other race alone",                        table: B25003F}
+      - {group: "Two or more races",                            table: B25003G}
+      - {group: "White alone, not Hispanic or Latino",          table: B25003H}
+      - {group: "Hispanic or Latino (any race)",                table: B25003I}
+    components:
+      total:  ["001"]
+      owner:  ["002"]
+      renter: ["003"]
+    measures:
+      - {id: occupied_households, label: "Households (occupied housing units)", type: count, component: total}
+      - {id: owner_households,    label: "Owner-occupied households",           type: count, component: owner}
+      - {id: renter_households,   label: "Renter-occupied households",          type: count, component: renter}
+      - {id: homeownership_rate,  label: "Homeownership rate (% of households that own their home)", type: percent, numerator: owner, denominator: total}
+    checks:
+      parts_equal_total:
+        - {parts: [owner, renter], total: total}
+      subgroups_sum_to_total:
+        # Race-alone groups are mutually exclusive and together cover everyone.
+        # "White alone, not Hispanic" and "Hispanic or Latino" overlap them,
+        # so they are not part of this sum.
+        total_group: "All households"
+        components: [total, owner, renter]
+        groups:
+          - "White alone"
+          - "Black or African American alone"
+          - "American Indian and Alaska Native alone"
+          - "Asian alone"
+          - "Native Hawaiian and Other Pacific Islander alone"
+          - "Some other race alone"
+          - "Two or more races"
+    notes: >-
+      Race groups follow Census "alone" categories; Hispanic or Latino
+      residents can be of any race. Small groups (American Indian and Alaska
+      Native, Native Hawaiian and Other Pacific Islander) are often
+      suppressed, especially in 1-year data and at tract level.
+
+  # ---- Planned (milestone 2 and 3). Table IDs listed; variable numbers will
+  # ---- be verified against the Census API variable lists before activation.
+
+  - id: child_housing_cost_burden
+    status: planned
+    name: Children in households paying 30% or more (and 50% or more) of income on housing
+    vital_condition: Humane Housing
+    source: pums
+    surveys: [acs1, acs5]
+    geographies: [puma]
+    universe: Children under 18 in households
+    disaggregations: [race_ethnicity, tenure]
+    legacy_vintage: {label: "2015-2019 ACS 5-year PUMS", year: 2019, survey: acs5, verified: false, basis: "BUILD_PROMPT.md"}
+    notes: Built from PUMS microdata with replicate weights (milestone 3). PUMAs approximate the county.
+
+  - id: median_household_income
+    status: planned
+    name: Median household income
+    vital_condition: Meaningful Work & Wealth
+    source: acs
+    tables: [S1903]
+    universe: Households
+    disaggregations: [race_ethnicity]
+    legacy_vintage: {label: "2021 ACS", year: 2021, survey: acs1, verified: false, basis: "BUILD_PROMPT.md"}
+
+  - id: household_income_quintiles
+    status: planned
+    name: Household income quintile upper limits
+    vital_condition: Meaningful Work & Wealth
+    source: acs
+    tables: [B19080]
+    universe: Households
+    legacy_vintage: {label: "2021 ACS", year: 2021, survey: acs1, verified: false, basis: "BUILD_PROMPT.md"}
+
+  - id: homeownership_by_age
+    status: planned
+    name: Homeownership by age of householder
+    vital_condition: Humane Housing
+    source: acs
+    tables: [B25007]
+    universe: Occupied housing units
+    disaggregations: [age, tenure]
+    legacy_vintage: {label: "2021 ACS", year: 2021, survey: acs1, verified: false, basis: "BUILD_PROMPT.md"}
+
+  - id: labor_force_participation
+    status: planned
+    name: Employment and labor force participation
+    vital_condition: Meaningful Work & Wealth
+    source: acs
+    tables: [S2301]
+    universe: Population 16 years and over
+    disaggregations: [race_ethnicity, sex, age]
+    legacy_vintage: {label: "2021 ACS", year: 2021, survey: acs1, verified: false, basis: "BUILD_PROMPT.md"}
+
+  - id: housing_cost_burden
+    status: planned
+    name: Households paying 30% or more of income on housing (renters and owners)
+    vital_condition: Humane Housing
+    source: acs
+    tables: [B25070, B25091]
+    universe: Renter-occupied and owner-occupied housing units
+    disaggregations: [tenure]
+    legacy_vintage: {label: "2021 ACS", year: 2021, survey: acs1, verified: false, basis: "BUILD_PROMPT.md"}
+
+  - id: households_without_vehicle
+    status: planned
+    name: Households without a vehicle
+    vital_condition: Reliable Transportation
+    source: acs
+    tables: [B08201]
+    universe: Households
+    legacy_vintage: {label: "unknown", year: null, survey: null, verified: false, basis: "Not stated in BUILD_PROMPT.md"}
+
+  - id: poverty_rate
+    status: planned
+    name: People living below the poverty line
+    vital_condition: Basic Needs for Health & Safety
+    source: acs
+    tables: [B17001]
+    universe: Population for whom poverty status is determined
+    disaggregations: [age, sex]
+    legacy_vintage: {label: "unknown", year: null, survey: null, verified: false, basis: "Not stated in BUILD_PROMPT.md"}

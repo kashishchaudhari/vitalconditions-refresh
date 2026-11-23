@@ -1,0 +1,2 @@
+# TODO: add figures already published by Forsyth Futures / Forsyth Family Power, one row per value, with the page URL and the date you captured it. Used only as a validation reference (differences are warnings, not failures). Lines starting with # are ignored.
+indicator_id,measure,geography,geoid,year,vintage_type,group,legacy_value,source_url,source_title,date_captured,explanation

@@ -1,0 +1,31 @@
+# Pipeline settings. Edit these, not the R code, for routine changes.
+
+area:
+  state_fips: "37"          # North Carolina
+  county_fips: "067"        # Forsyth County
+  county_geoid: "37067"
+  state_abbr: "NC"
+  county_name: "Forsyth County"
+
+acs:
+  # Earliest year to pull. Vintages after this are detected at run time by
+  # asking the Census API which years exist; no year is hard-coded.
+  start_year: 2009
+  surveys: [acs1, acs5]
+  # Census publishes margins of error at the 90% confidence level.
+  moe_level: 90
+
+reliability:
+  # Coefficient of variation (CV, %) cut points:
+  #   CV < reliable_cv_max                  -> reliable
+  #   reliable_cv_max <= CV <= caution_cv_max -> use_with_caution
+  #   CV > caution_cv_max                   -> suppress
+  reliable_cv_max: 15
+  caution_cv_max: 30
+  # Percentages whose denominator (base) is below this count are suppressed.
+  min_denominator: 50
+
+paths:
+  cache_dir: data/cache/acs
+  tableau_dir: outputs/tableau
+  validation_dir: outputs/validation
