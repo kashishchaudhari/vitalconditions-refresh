@@ -80,7 +80,7 @@ jobs:
           if-no-files-found: ignore
 
       - name: Upload site for GitHub Pages
-        if: github.event_name != 'pull_request' && env.CENSUS_API_KEY != ''
+        if: github.event_name != 'pull_request' && env.CENSUS_API_KEY != '' && vars.ENABLE_PAGES == 'true'
         uses: actions/upload-pages-artifact@v3
         with:
           path: _site
@@ -95,8 +95,10 @@ jobs:
   deploy-pages:
     name: Deploy to GitHub Pages
     needs: build
-    # Only after a passing validation, never for pull requests.
+    # Only after a passing validation, never for pull requests, and only if
+    # the repo variable ENABLE_PAGES is 'true' (the live site is on Vercel).
     if: >-
+      vars.ENABLE_PAGES == 'true' &&
       github.event_name != 'pull_request' &&
       (needs.build.outputs.validation == 'pass' || needs.build.outputs.validation == 'pass_with_warnings')
     runs-on: ubuntu-latest

@@ -7,6 +7,7 @@ GitHub Actions (.github/workflows/refresh.yml)
   build job:  renv restore -> tests -> tar_make() (pull, build, VALIDATE, render)
               └─ any validation failure stops here; nothing is published
   deploy-pages job:   only on manual or scheduled runs, only if build passed
+                      and repo variable ENABLE_PAGES = true
   deploy-vercel job:  same, and only if repo variable ENABLE_VERCEL = true
 ```
 
@@ -29,9 +30,9 @@ Repo **Settings → Secrets and variables → Actions → New repository secret*
 
 It is stored encrypted, and GitHub hides it in logs. Pull requests from forks do not receive secrets, so for those the workflow runs only the offline tests.
 
-### 2. GitHub Pages
+### 2. GitHub Pages (optional, off by default; the live site is on Vercel)
 
-**Settings → Pages → Build and deployment → Source: GitHub Actions.** The site will be at `https://<user>.github.io/vitalconditions-refresh/`.
+**Settings → Pages → Build and deployment → Source: GitHub Actions**, then add a repository variable `ENABLE_PAGES` = `true`. The site will be at `https://<user>.github.io/vitalconditions-refresh/`.
 
 ### 3. Vercel (optional, off by default)
 
