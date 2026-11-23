@@ -34,6 +34,7 @@ prepare_site_inputs <- function(info, output_files, site_dir = "site") {
   unlink(data_dir, recursive = TRUE)
   dir.create(data_dir, recursive = TRUE)
   file.copy(unname(unlist(output_files)), data_dir, overwrite = TRUE)
+  write_explorer_data(file.path(data_dir, "all_indicators.csv"), file.path(data_dir, "explorer_county.csv"))
   footer_left <- paste0(
     "Independent, unofficial prototype: not affiliated with or endorsed by Forsyth Futures. ",
     "Data: U.S. Census Bureau ACS (open public data)."
@@ -44,6 +45,19 @@ prepare_site_inputs <- function(info, output_files, site_dir = "site") {
   yaml::write_yaml(list(website = list(`page-footer` = list(left = footer_left, right = footer_right))),
                    file.path(site_dir, "_build_info.yml"))
   c(list.files(data_dir, full.names = TRUE), file.path(site_dir, "_build_info.yml"))
+}
+
+#' Compact county-level file for the in-browser Explore page (rows in the
+#' registry's group order, numbers rounded for size).
+write_explorer_data <- function(all_path, out_path) {
+  read_output_csv(all_path) |>
+    dplyr::filter(geography %in% c("county", "county_pums"), include_in_trend) |>
+    dplyr::transmute(indicator_id, vital_condition, year, vintage_type, acs_period, group,
+                     measure, measure_label, unit,
+                     estimate = signif(estimate, 7), moe = signif(moe, 5), cv = round(cv, 1),
+                     reliability_flag, source_table, notes) |>
+    readr::write_csv(out_path, na = "")
+  out_path
 }
 
 #' Run quarto with this R session's package library, so the child R process

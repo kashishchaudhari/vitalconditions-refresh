@@ -1,0 +1,107 @@
+---
+title: "Explore the indicators"
+page-layout: full
+toc: false
+---
+
+Choose a Vital Condition, an indicator and the groups to compare. Hover over any point to see its value, margin of error and reliability. **Filled points are reliable. Open points mean "use with caution". Suppressed estimates are hidden** unless you choose to show them. The shaded band is the 90% margin of error.
+
+```{ojs}
+//| echo: false
+raw = FileAttachment("data/explorer_county.csv").csv({typed: true})
+stale = FileAttachment("data/staleness_report.csv").csv({typed: true})
+names = new Map(stale.map(d => [d.indicator_id, d.indicator_name]))
+uniq = arr => Array.from(new Set(arr))
+fmt = (unit, v) => v == null || Number.isNaN(v) ? "—"
+  : unit === "dollars" ? d3.format("$,.0f")(v)
+  : unit === "percent" ? d3.format(".1f")(v) + "%"
+  : d3.format(",.0f")(v)
+flagText = f => ({reliable: "Reliable", use_with_caution: "Use with caution", suppress: "Suppressed (too uncertain)"})[f] ?? f
+```
+
+::: {.grid}
+::: {.g-col-12 .g-col-md-4}
+```{ojs}
+//| echo: false
+viewof vc = Inputs.select(uniq(raw.map(d => d.vital_condition)), {label: "Vital Condition"})
+viewof ind = Inputs.select(uniq(raw.filter(d => d.vital_condition === vc).map(d => d.indicator_id)),
+  {label: "Indicator", format: id => names.get(id) ?? id})
+rowsInd = raw.filter(d => d.indicator_id === ind)
+measureList = uniq(rowsInd.map(d => d.measure))
+measureLabel = new Map(rowsInd.map(d => [d.measure, d.measure_label]))
+measureUnit = new Map(rowsInd.map(d => [d.measure, d.unit]))
+defaultMeasure = measureList.find(m => measureUnit.get(m) === "percent")
+  ?? measureList.find(m => measureUnit.get(m) === "dollars") ?? measureList[0]
+viewof meas = Inputs.select(measureList, {label: "Measure", value: defaultMeasure, format: m => measureLabel.get(m)})
+surveys = uniq(rowsInd.filter(d => d.measure === meas).map(d => d.vintage_type)).sort()
+viewof survey = Inputs.radio(surveys, {
+  label: "Data",
+  value: surveys.includes("acs1") ? "acs1" : surveys[0],
+  format: s => s === "acs1" ? "1-year (newest, county)" : "5-year (more stable)"})
+groupList = uniq(rowsInd.filter(d => d.measure === meas && d.vintage_type === survey).map(d => d.group))
+viewof groups = Inputs.checkbox(groupList, {label: "Groups", value: groupList.slice(0, Math.min(3, groupList.length))})
+viewof showSuppressed = Inputs.toggle({label: "Show suppressed estimates (not recommended)", value: false})
+```
+:::
+
+::: {.g-col-12 .g-col-md-8}
+```{ojs}
+//| echo: false
+unit = measureUnit.get(meas)
+series = rowsInd
+  .filter(d => d.measure === meas && d.vintage_type === survey && groups.includes(d.group))
+  .map(d => ({...d,
+    shown: d.reliability_flag === "suppress" && !showSuppressed ? null : d.estimate,
+    era: d.year < 2020 ? "before 2020" : "2020 on",
+    tipText: `${d.group}\n${d.acs_period}${d.vintage_type === "acs5" ? " (5-year)" : ""}: ${fmt(unit, d.estimate)} ± ${fmt(unit, d.moe)}\n${flagText(d.reliability_flag)}${d.cv != null ? ` (CV ${d.cv}%)` : ""}\nSource: ${d.source_table}`}))
+html`<h4 style="margin-top:0">${names.get(ind)}</h4><div style="color:#555">${measureLabel.get(meas)}</div>`
+```
+
+```{ojs}
+//| echo: false
+Plot.plot({
+  width: Math.min(width, 900), height: 440, marginLeft: 60,
+  x: {tickFormat: "d", label: null},
+  y: {grid: true, label: unit === "percent" ? "%" : unit === "dollars" ? "dollars" : "count",
+      tickFormat: unit === "dollars" ? "$,.0f" : unit === "percent" ? ".0f" : ",.0f"},
+  color: {legend: true, domain: groups},
+  marks: [
+    Plot.areaY(series.filter(d => d.shown != null), {x: "year", y1: d => d.shown - d.moe, y2: d => d.shown + d.moe,
+      fill: "group", fillOpacity: 0.12, z: d => d.group + d.era}),
+    Plot.lineY(series, {x: "year", y: "shown", stroke: "group", z: d => d.group + d.era, strokeWidth: 2}),
+    Plot.dot(series.filter(d => d.shown != null && d.reliability_flag === "reliable"),
+      {x: "year", y: "shown", fill: "group", r: 4.5, title: "tipText", tip: true}),
+    Plot.dot(series.filter(d => d.shown != null && d.reliability_flag !== "reliable"),
+      {x: "year", y: "shown", stroke: "group", fill: "white", strokeWidth: 2, r: 4.5, title: "tipText", tip: true}),
+    survey === "acs1" ? Plot.ruleX([2020], {stroke: "#999", strokeDasharray: "4,3"}) : null,
+    survey === "acs1" ? Plot.text([2020], {x: d => d, frameAnchor: "top", dy: 4, text: () => "no 2020\n1-year data", fill: "#777", fontSize: 10}) : null
+  ]
+})
+```
+:::
+:::
+
+### Latest values for every group
+
+```{ojs}
+//| echo: false
+latestYear = d3.max(rowsInd.filter(d => d.measure === meas && d.vintage_type === survey), d => d.year)
+latest = rowsInd.filter(d => d.measure === meas && d.vintage_type === survey && d.year === latestYear)
+html`<p>${latest[0]?.acs_period} ${survey === "acs1" ? "ACS 1-year" : "ACS 5-year"}. ${(() => {
+  const s = stale.find(x => x.indicator_id === ind);
+  return s ? `The legacy site shows ${s.legacy_vintage}${s.legacy_vintage_verified ? "" : " (not yet verified)"}. This refresh: ${s.refreshed_vintage}.` : "";
+})()}</p>`
+```
+
+```{ojs}
+//| echo: false
+Inputs.table(latest.map(d => ({
+  Group: d.group,
+  Estimate: d.reliability_flag === "suppress" ? "suppressed" : fmt(unit, d.estimate),
+  "Margin of error": d.reliability_flag === "suppress" ? "" : "± " + fmt(unit, d.moe),
+  Reliability: flagText(d.reliability_flag),
+  Notes: d.notes ?? ""
+})), {layout: "auto", rows: 20, width: {Notes: 380}})
+```
+
+Data: U.S. Census Bureau, American Community Survey (detailed and subject tables, and PUMS for Child Housing Cost Burden). Download everything on the [Data downloads](downloads.qmd) page.

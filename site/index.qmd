@@ -8,6 +8,8 @@ This site holds **refreshed public indicators for Forsyth County, NC**, mapped t
 **Independent, unofficial prototype.** This site is not affiliated with or endorsed by Forsyth Futures. It uses only open public data and is offered as a *draft public resource*, not a finished community narrative.
 :::
 
+- **[Explore](explore.qmd):** interactive trends by Vital Condition, indicator and group, with margins of error and reliability on hover.
+- **[Map](map.qmd):** interactive tract map of childcare supply, cost of care, income and renter cost burden, side by side.
 - **[Refresh summary](report.qmd):** what is newer than the legacy figures, trends by Vital Condition, and the childcare and housing tract maps.
 - **[Validation](validation.qmd):** every source-to-target check and its result.
 - **[Data downloads](downloads.qmd):** CSV and GeoJSON files ready for Tableau Public.

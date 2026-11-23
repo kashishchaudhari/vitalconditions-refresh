@@ -15,6 +15,10 @@ website:
     left:
       - href: index.qmd
         text: Home
+      - href: explore.qmd
+        text: Explore
+      - href: map.qmd
+        text: Map
       - href: report.qmd
         text: Refresh summary
       - href: validation.qmd

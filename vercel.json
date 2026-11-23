@@ -4,5 +4,6 @@
   "installCommand": null,
   "framework": null,
   "outputDirectory": "_site",
-  "cleanUrls": true
+  "cleanUrls": true,
+  "git": { "deploymentEnabled": false }
 }

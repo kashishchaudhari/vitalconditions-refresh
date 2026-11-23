@@ -1,0 +1,123 @@
+---
+title: "Childcare and housing affordability map"
+page-layout: full
+toc: false
+---
+
+```{ojs}
+//| echo: false
+geo = FileAttachment("data/affordability_gap.geojson").json()
+fac = FileAttachment("data/childcare_facilities.geojson").json()
+isSample = geo.features.some(f => String(f.properties.data_status).includes("SAMPLE"))
+html`${isSample ? html`<div class="callout callout-style-default callout-important" style="padding:.6em 1em;border-left:5px solid #c53030;background:#fff5f5;margin-bottom:1em">
+<strong>Childcare supply uses PLACEHOLDER SAMPLE facilities, not real data.</strong> The slot measures and the facility points show how the tool works, but their patterns mean nothing until real facility data is loaded. Income, cost-of-care and housing measures are real Census data.</div>` : ""}`
+```
+
+Pick a measure to map. Hover over a tract to see **every measure side by side** with its margin of error and reliability. The measures are not combined into a score on purpose. Grey tracts are too uncertain to report.
+
+```{ojs}
+//| echo: false
+L = require("leaflet@1.9.4")
+html`<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"><style>.basemap-muted{filter:grayscale(1) brightness(1.08) contrast(0.85);}</style>`
+measures = [
+  {key: "slots_per_100_children_buffer", moe: "slots_per_100_children_buffer_moe", flag: "slots_per_100_children_buffer_flag",
+   label: "Licensed slots per 100 children under 5, nearby (within 2 miles)" + (isSample ? " [SAMPLE]" : ""), unit: "n"},
+  {key: "slots_per_100_children", moe: "slots_per_100_children_moe", flag: "slots_per_100_children_flag",
+   label: "Licensed slots per 100 children under 5, in the tract" + (isSample ? " [SAMPLE]" : ""), unit: "n"},
+  {key: "infant_care_cost_pct_of_income", moe: "infant_care_cost_pct_of_income_moe", flag: "infant_care_cost_pct_of_income_flag",
+   label: "Infant center care cost as % of median family income", unit: "%"},
+  {key: "renter_cost_burden_pct", moe: "renter_cost_burden_pct_moe", flag: "renter_cost_burden_pct_flag",
+   label: "Renters paying 30%+ of income on housing", unit: "%"},
+  {key: "median_family_income", moe: "median_family_income_moe", flag: "median_family_income_flag",
+   label: "Median family income", unit: "$"},
+  {key: "children_under_5", moe: "children_under_5_moe", flag: "children_under_5_flag",
+   label: "Children under 5", unit: "n"},
+  {key: "pct_under_6_all_parents_working", moe: "pct_under_6_all_parents_working_moe", flag: "pct_under_6_all_parents_working_flag",
+   label: "Children under 6 whose parents all work (%)", unit: "%"}
+]
+fmtv = (u, v) => v == null ? "—" : u === "$" ? d3.format("$,.0f")(v) : u === "%" ? d3.format(".1f")(v) + "%" : d3.format(",.1f")(v)
+flagWord = f => ({reliable: "reliable", use_with_caution: "use with caution", suppress: "too uncertain"})[f] ?? ""
+viewof mkey = Inputs.select(measures.map(m => m.key), {label: "Map this measure", format: k => measures.find(m => m.key === k).label, width: 480})
+viewof showFac = Inputs.toggle({label: "Show child care facilities" + (isSample ? " (SAMPLE, not real)" : ""), value: false})
+```
+
+```{ojs}
+//| echo: false
+mapDiv = html`<div style="height:600px;border-radius:6px;border:1px solid #ddd"></div>`
+```
+
+```{ojs}
+//| echo: false
+leafletMap = {
+  const m = L.map(mapDiv, {scrollWheelZoom: false}).setView([36.10, -80.25], 10);
+  // Standard OpenStreetMap tiles (no key; attribution required by the OSM
+  // tile usage policy). Lightened with CSS so the data stands out.
+  L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+    maxZoom: 18, className: "basemap-muted"
+  }).addTo(m);
+  m.fitBounds(L.geoJSON(geo).getBounds(), {padding: [10, 10]});
+  m.createPane("facilities").style.zIndex = 650;   // always above the tracts
+  setTimeout(() => m.invalidateSize(), 200);
+  invalidation.then(() => m.remove());
+  return m;
+}
+```
+
+```{ojs}
+//| echo: false
+tractLayer = {
+  const meas = measures.find(m => m.key === mkey);
+  const shownVal = p => p[meas.flag] === "suppress" ? null : p[meas.key];
+  const vals = geo.features.map(f => shownVal(f.properties)).filter(v => v != null);
+  const color = d3.scaleQuantile(vals, d3.schemeYlGnBu[5]);
+  const tip = p => `<div style="font-size:12px;line-height:1.35">
+    <strong>${p.tract_name}</strong><br>
+    ${measures.map(m => `${m.key === meas.key ? "<b>" : ""}${m.label}: ${p[m.flag] === "suppress" ? "too uncertain" :
+      fmtv(m.unit, p[m.key]) + (p[m.moe] != null ? " ± " + fmtv(m.unit, p[m.moe]) : "") + ` <span style="color:#777">(${flagWord(p[m.flag])})</span>`}${m.key === meas.key ? "</b>" : ""}`).join("<br>")}
+    <br><span style="color:#777">Supply category: ${p.supply_category}<br>Cost category: ${p.cost_category}</span></div>`;
+  const layer = L.geoJSON(geo, {
+    style: f => {
+      const v = shownVal(f.properties);
+      return {fillColor: v == null ? "#cfcfcf" : color(v), fillOpacity: 0.78, color: "#fff", weight: 0.8};
+    },
+    onEachFeature: (f, lyr) => {
+      lyr.bindTooltip(tip(f.properties), {sticky: true});
+      lyr.on("mouseover", () => lyr.setStyle({weight: 2.5, color: "#333"}));
+      lyr.on("mouseout", () => layer.resetStyle(lyr));
+    }
+  }).addTo(leafletMap);
+  invalidation.then(() => leafletMap.removeLayer(layer));
+  return {color, meas};
+}
+```
+
+```{ojs}
+//| echo: false
+facLayer = {
+  if (!showFac) return null;
+  const layer = L.geoJSON(fac, {
+    pointToLayer: (f, ll) => L.circleMarker(ll, {pane: "facilities", radius: 4.5, color: "#7b341e", fillColor: "#ed8936", weight: 1, fillOpacity: 0.95}),
+    onEachFeature: (f, lyr) => lyr.bindTooltip(`<strong>${f.properties.facility_name}</strong><br>${f.properties.facility_type}<br>Licensed capacity: ${f.properties.licensed_capacity}<br>Star rating: ${f.properties.star_rating ?? "—"}`)
+  }).addTo(leafletMap);
+  invalidation.then(() => leafletMap.removeLayer(layer));
+  return layer;
+}
+```
+
+```{ojs}
+//| echo: false
+{
+  const {color, meas} = tractLayer;
+  const q = color.quantiles();
+  const ext = d3.extent(color.domain());
+  const breaks = [ext[0], ...q, ext[1]];
+  return html`<div style="display:flex;gap:14px;flex-wrap:wrap;align-items:center;font-size:13px;margin-top:6px">
+    <strong>${meas.label}</strong>
+    ${color.range().map((c, i) => html`<span><span style="display:inline-block;width:14px;height:14px;background:${c};vertical-align:middle;margin-right:4px"></span>${fmtv(meas.unit, breaks[i])} to ${fmtv(meas.unit, breaks[i + 1])}</span>`)}
+    <span><span style="display:inline-block;width:14px;height:14px;background:#cfcfcf;vertical-align:middle;margin-right:4px"></span>too uncertain</span>
+  </div>`;
+}
+```
+
+**How to read this.** "Nearby" counts licensed slots and children within 2 miles (straight line) of each tract's center, because families often use care outside their own tract. Licensed capacity covers all ages, so it overstates infant care. Cost of care uses the NC subsidized market rate for a 5-star infant center in Forsyth County ($1,400/month, effective Oct 1, 2026), which is not the price every family pays. Family, friend and neighbor care is not counted. See [Limitations](limitations.qmd).
