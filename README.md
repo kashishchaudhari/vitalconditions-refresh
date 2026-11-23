@@ -4,6 +4,8 @@ A reproducible R pipeline that refreshes public indicators for Forsyth County, N
 
 > **Independent, unofficial prototype.** This project is not affiliated with or endorsed by Forsyth Futures. It uses only open public data (U.S. Census ACS and TIGER/Line) and is offered as a **draft public resource**, not a finished community narrative.
 
+**Live site:** https://vitalconditions-refresh.vercel.app (interactive explorer and tract map)
+
 ## Status
 
 All six milestones in [`BUILD_PROMPT.md`](BUILD_PROMPT.md) are built: 10 ACS indicators plus one PUMS indicator across five Vital Conditions, a tract-level childcare and housing affordability module, a blocking validation stage, a Quarto report and website, and a GitHub Actions workflow. Two things are still open: the **childcare supply data is a SAMPLE placeholder** (see [`data/childcare/README.md`](data/childcare/README.md)), and the legacy reference figures have not been entered. [`docs/assumptions.md`](docs/assumptions.md) lists what was verified and what was assumed.

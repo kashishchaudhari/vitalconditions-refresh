@@ -41,6 +41,16 @@ It is stored encrypted, and GitHub hides it in logs. Pull requests from forks do
 
 The job deploys the already-built `_site/` folder as static files (`vercel.json` sets the output directory). No serverless functions are used.
 
+### Vercel from your own machine (how the live site is deployed now)
+
+The live site is at https://vitalconditions-refresh.vercel.app (Vercel project `vitalconditions-refresh`). To update it after a local `targets::tar_make()`:
+
+```powershell
+npx vercel deploy --prod --yes
+```
+
+This uploads only the built `_site/` folder (`.vercelignore`) as static files. `vercel.json` turns off Vercel's own Git builds, because Vercel cannot run the R pipeline. The first time on a new machine, run `npx vercel login` and `npx vercel link --project vitalconditions-refresh`.
+
 ## Running a refresh manually
 
 **Actions → Refresh, validate and publish → Run workflow** on `main`. When it finishes:

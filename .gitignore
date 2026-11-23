@@ -42,3 +42,9 @@ site/_build_info.yml
 site/.quarto/
 reports/*.html
 reports/*_files/
+
+# Vercel CLI link (local)
+.vercel/
+
+.vercel
+.env*
