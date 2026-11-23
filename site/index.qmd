@@ -10,9 +10,13 @@ This site holds **refreshed public indicators for Forsyth County, NC**, mapped t
 
 - **[Explore](explore.qmd):** interactive trends by Vital Condition, indicator and group, with margins of error and reliability on hover.
 - **[Map](map.qmd):** interactive tract map of childcare supply, cost of care, income and renter cost burden, side by side.
-- **[Refresh summary](report.qmd):** what is newer than the legacy figures, trends by Vital Condition, and the childcare and housing tract maps.
+- **[Refresh summary](report.qmd):** the newest data available for each indicator, trends by Vital Condition, and the childcare and housing tract maps.
 - **[Validation](validation.qmd):** every source-to-target check and its result.
 - **[Data downloads](downloads.qmd):** CSV and GeoJSON files ready for Tableau Public.
 - **[Limitations](limitations.qmd):** who this data leaves out, and how to read it.
 
-Code: <https://github.com/kashishchaudhari/vitalconditions-refresh>
+## About this prototype
+
+Built by **Kashish Chaudhari** as an independent portfolio project, to show how a recurring indicator refresh can be automated, made transparent about uncertainty, and kept easy for one analyst to maintain. Feedback is welcome.
+
+[LinkedIn](https://www.linkedin.com/in/kashishchaudhari) · [Code and documentation on GitHub](https://github.com/kashishchaudhari/vitalconditions-refresh)

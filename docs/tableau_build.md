@@ -56,7 +56,7 @@ This mirrors the dropdown filters Forsyth Family Power already uses.
 +-----------------------------------+------------------------------+
 | Trend line (trends_county.csv)    | Latest value card            |
 |  x = year, y = Shown value        |  estimate ± moe, flag text   |
-|  shape = reliability_flag         |  "legacy showed: <vintage>"  |
+|  shape = reliability_flag         |  "newest available: <vintage>"|
 |  band = estimate ± moe            |  (from staleness_report)     |
 +-----------------------------------+------------------------------+
 | Group comparison, latest year: horizontal bars with error bars,  |

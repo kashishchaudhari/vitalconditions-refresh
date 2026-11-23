@@ -89,7 +89,7 @@ latestYear = d3.max(rowsInd.filter(d => d.measure === meas && d.vintage_type ===
 latest = rowsInd.filter(d => d.measure === meas && d.vintage_type === survey && d.year === latestYear)
 html`<p>${latest[0]?.acs_period} ${survey === "acs1" ? "ACS 1-year" : "ACS 5-year"}. ${(() => {
   const s = stale.find(x => x.indicator_id === ind);
-  return s ? `The legacy site shows ${s.legacy_vintage}${s.legacy_vintage_verified ? "" : " (not yet verified)"}. This refresh: ${s.refreshed_vintage}.` : "";
+  return s ? `Newest available: ${s.refreshed_vintage}.` : "";
 })()}</p>`
 ```
 

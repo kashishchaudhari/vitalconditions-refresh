@@ -15,7 +15,7 @@ info <- data.frame(file = basename(files), size_kb = round(file.size(files) / 10
 |---|---|
 | [all_indicators.csv](data/all_indicators.csv) | Every indicator, county and tracts, all years, long format |
 | [trends_county.csv](data/trends_county.csv) | County rows safe for trend charts (no 2020 1-year) |
-| [staleness_report.csv](data/staleness_report.csv) | Legacy vintage vs newest vintage for each indicator |
+| [staleness_report.csv](data/staleness_report.csv) | Previously published vintage and newest available vintage, per indicator |
 | [affordability_gap_tracts.csv](data/affordability_gap_tracts.csv) | Childcare and housing affordability, one row per tract |
 | [affordability_gap.geojson](data/affordability_gap.geojson) | The same, with simplified tract boundaries (EPSG:4326) |
 | [childcare_facilities.geojson](data/childcare_facilities.geojson) | Facility points (**currently SAMPLE placeholder data**) |

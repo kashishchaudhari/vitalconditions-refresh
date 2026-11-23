@@ -1,6 +1,6 @@
-# Staleness report -------------------------------------------------------------
+# Staleness report ("what's new") ----------------------------------------------
 #
-# One row per active indicator: what the legacy site shows, the newest
+# One row per active indicator: the vintage previously published, the newest
 # vintage now available, and how many years newer the refresh is.
 
 build_staleness_report <- function(registry, all_out, vintages) {
@@ -29,9 +29,9 @@ build_staleness_report <- function(registry, all_out, vintages) {
       indicator_id = id,
       indicator_name = spec$name,
       vital_condition = spec$vital_condition,
-      legacy_vintage = lv$label %||% "unknown",
-      legacy_year = legacy_year,
-      legacy_vintage_verified = isTRUE(lv$verified),
+      previously_published_vintage = lv$label %||% "unknown",
+      previously_published_year = legacy_year,
+      previous_vintage_verified = isTRUE(lv$verified),
       refreshed_vintage = refreshed_label,
       latest_available_acs1 = latest1,
       latest_available_acs5 = acs_period_label("acs5", latest5),
@@ -44,12 +44,12 @@ build_staleness_report <- function(registry, all_out, vintages) {
       pct_use_with_caution = round(100 * flags[["use_with_caution"]] / nrow(d), 1),
       pct_suppress = round(100 * flags[["suppress"]] / nrow(d), 1),
       status = dplyr::case_when(
-        is.na(legacy_year) ~ paste0("New or legacy vintage unknown; now ", refreshed_label),
-        refreshed_year > legacy_year ~ paste0("Refreshed: ", lv$label, " -> ", refreshed_label),
-        TRUE ~ "Not newer than legacy"
+        is.na(legacy_year) ~ paste0("Newest available: ", refreshed_label),
+        refreshed_year > legacy_year ~ paste0("Updated from ", lv$label, " to ", refreshed_label),
+        TRUE ~ "Same as previously published"
       ),
       notes = if (isTRUE(lv$verified)) NA_character_ else
-        "Legacy vintage taken from the project brief; not yet checked against the live legacy page."
+        "Previously published vintage is an assumption and has not yet been confirmed."
     )
   })
 }

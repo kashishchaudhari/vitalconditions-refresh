@@ -36,6 +36,9 @@ prepare_site_inputs <- function(info, output_files, site_dir = "site") {
   file.copy(unname(unlist(output_files)), data_dir, overwrite = TRUE)
   write_explorer_data(file.path(data_dir, "all_indicators.csv"), file.path(data_dir, "explorer_county.csv"))
   footer_left <- paste0(
+    "Built by Kashish Chaudhari &middot; ",
+    "<a href=\"https://www.linkedin.com/in/kashishchaudhari\">LinkedIn</a> &middot; ",
+    "<a href=\"https://github.com/kashishchaudhari/vitalconditions-refresh\">Code on GitHub</a><br>",
     "Independent, unofficial prototype: not affiliated with or endorsed by Forsyth Futures. ",
     "Data: U.S. Census Bureau ACS (open public data)."
   )

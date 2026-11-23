@@ -6,9 +6,11 @@ A reproducible R pipeline that refreshes public indicators for Forsyth County, N
 
 **Live site:** https://vitalconditions-refresh.vercel.app (interactive explorer and tract map)
 
+**Built by:** Kashish Chaudhari, as an independent portfolio project ([LinkedIn](https://www.linkedin.com/in/kashishchaudhari)). Feedback is welcome.
+
 ## Status
 
-All six milestones in [`BUILD_PROMPT.md`](BUILD_PROMPT.md) are built: 10 ACS indicators plus one PUMS indicator across five Vital Conditions, a tract-level childcare and housing affordability module, a blocking validation stage, a Quarto report and website, and a GitHub Actions workflow. Two things are still open: the **childcare supply data is a SAMPLE placeholder** (see [`data/childcare/README.md`](data/childcare/README.md)), and the legacy reference figures have not been entered. [`docs/assumptions.md`](docs/assumptions.md) lists what was verified and what was assumed.
+All six milestones in [`BUILD_PROMPT.md`](BUILD_PROMPT.md) are built: 10 ACS indicators plus one PUMS indicator across five Vital Conditions, a tract-level childcare and housing affordability module, a blocking validation stage, a Quarto report and website, and a GitHub Actions workflow. Two things are still open: the **childcare supply data is a SAMPLE placeholder** (see [`data/childcare/README.md`](data/childcare/README.md)), and previously published reference figures have not been entered. [`docs/assumptions.md`](docs/assumptions.md) lists what was verified and what was assumed.
 
 | Vital Condition | Indicators |
 |---|---|
@@ -24,7 +26,7 @@ All six milestones in [`BUILD_PROMPT.md`](BUILD_PROMPT.md) are built: 10 ACS ind
 2. Builds counts and percentages, with margins of error, for each indicator in `config/indicators.yml`.
 3. Tags every number `reliable` (CV under 15%), `use_with_caution` (15-30%) or `suppress` (over 30%, zero, unpublished, or a base under 50). The thresholds are in `config/pipeline.yml`.
 4. Leaves 2020 ACS 1-year data out of trends (pandemic non-response bias) and says why in the `notes` column.
-5. Writes long-format CSVs to `outputs/tableau/`, a staleness report, and the childcare tract layer to `outputs/geo/`.
+5. Writes long-format CSVs to `outputs/tableau/`, a "what's new" report (previously published vintage vs newest available), and the childcare tract layer to `outputs/geo/`.
 6. **Validates** the outputs against the Census source and stops if anything fails (see below).
 7. Only if validation passed: renders `reports/refresh_summary.html` and the website in `_site/`.
 
@@ -53,11 +55,11 @@ Run the tests (no key or internet needed): `Rscript tests/testthat.R`.
 | `outputs/tableau/<indicator_id>.csv` | Every row for one indicator: county and tracts, all years |
 | `outputs/tableau/all_indicators.csv` | All indicators stacked in one file |
 | `outputs/tableau/trends_county.csv` | County rows safe to use in trend charts (no 2020 1-year) |
-| `outputs/tableau/staleness_report.csv` | Legacy vintage vs newest vintage, per indicator |
+| `outputs/tableau/staleness_report.csv` | Previously published vintage vs newest available, per indicator |
 | `outputs/tableau/affordability_gap_tracts.csv` | Childcare supply, cost of care and renter cost burden, one row per tract |
 | `outputs/geo/affordability_gap.geojson` | Same, with simplified tract boundaries (EPSG:4326) |
 | `outputs/geo/childcare_facilities.geojson`, `municipal_boundaries.geojson` | Facility points (SAMPLE for now) and town boundaries for context |
-| `reports/refresh_summary.html` | Staleness table, trend charts by Vital Condition, tract maps |
+| `reports/refresh_summary.html` | Newest-data table, trend charts by Vital Condition, tract maps |
 | `_site/` | The website (home, summary, validation, downloads, limitations) |
 | `outputs/validation/validation_report.html` | Every validation check, with the failing rows if any |
 | `outputs/validation/validation_summary.json` | Pass, warn and fail counts per check |
@@ -94,8 +96,8 @@ Run `targets::tar_make()` after each Census release: 1-year data comes out each 
 - **Rules:** schema, value ranges, required fields, and no 2020 1-year data in trends.
 - **PUMS benchmark:** weighted PUMS totals (persons, households, children) match the published ACS totals for the same PUMAs within ±2%.
 - **Geometry:** the tract GeoJSON is valid, in EPSG:4326, has every tract once, and joins 1:1 to the tract CSV. Facility points fall inside the county.
-- **Staleness:** every indicator reaches the newest available vintage.
-- **Legacy comparison** (warnings only): against figures Forsyth Futures already published, listed in `config/legacy_reference.csv`. This file is empty for now (TODO).
+- **Newest data:** every indicator reaches the newest available vintage.
+- **Comparison with published figures** (warnings only): against figures already published by Forsyth Futures, listed in `config/legacy_reference.csv`. This file is empty for now (TODO).
 
 Any **fail** stops `tar_make()` with an error. Tolerances are in `config/validation.yml`.
 

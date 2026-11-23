@@ -30,15 +30,15 @@ flag_shapes <- c(reliable = 16, use_with_caution = 1)
 
 Data run on **`r substr(val$run_time_utc, 1, 10)`**. Newest ACS releases: 1-year **`r val$acs_vintages$acs1_latest`**, 5-year **`r acs_period_label("acs5", val$acs_vintages$acs5_latest)`**. Validation: **`r toupper(gsub("_", " ", val$overall_status))`** (`r val$counts$pass` checks passed, `r val$counts$warn` warnings, `r val$counts$fail` failures).
 
-## What changed: legacy vintage to newest data
+## Newest data available for each indicator
 
 ```{r}
 #| label: staleness
 stale |>
   transmute(Indicator = indicator_name, `Vital Condition` = vital_condition,
-            `Legacy site shows` = legacy_vintage,
-            `Legacy verified?` = ifelse(legacy_vintage_verified, "yes", "not yet"),
-            `Refreshed to` = refreshed_vintage,
+            `Previously published` = previously_published_vintage,
+            `Confirmed?` = ifelse(previous_vintage_verified, "yes", "not yet"),
+            `Newest available` = refreshed_vintage,
             `Years newer` = years_newer,
             `% reliable` = pct_reliable, `% caution` = pct_use_with_caution, `% suppressed` = pct_suppress) |>
   knitr::kable()
