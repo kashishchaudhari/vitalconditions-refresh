@@ -87,9 +87,11 @@ Plot.plot({
 //| echo: false
 latestYear = d3.max(rowsInd.filter(d => d.measure === meas && d.vintage_type === survey), d => d.year)
 latest = rowsInd.filter(d => d.measure === meas && d.vintage_type === survey && d.year === latestYear)
-html`<p>${latest[0]?.acs_period} ${survey === "acs1" ? "ACS 1-year" : "ACS 5-year"}. ${(() => {
+html`<p>Showing ${latest[0]?.acs_period} ${survey === "acs1" ? "ACS 1-year" : "ACS 5-year"}. ${(() => {
   const s = stale.find(x => x.indicator_id === ind);
-  return s ? `Newest available: ${s.refreshed_vintage}.` : "";
+  if (!s) return "";
+  const prev = s.previous_vintage_verified ? `Previously published: ${s.previously_published_vintage} (confirmed). ` : "";
+  return `${prev}Newest available: ${s.refreshed_vintage}.`;
 })()}</p>`
 ```
 
