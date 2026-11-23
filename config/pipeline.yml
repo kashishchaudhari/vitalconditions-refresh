@@ -25,6 +25,45 @@ reliability:
   # Percentages whose denominator (base) is below this count are suppressed.
   min_denominator: 50
 
+pums:
+  # PUMAs covering Forsyth County. In both the 2010 and 2020 PUMA definitions
+  # these three PUMAs cover exactly the county (verified, docs/assumptions.md).
+  pumas: ["01801", "01802", "01803"]
+  # Which PUMS releases to build. "latest" is detected from the Census API.
+  # 2019 5-year (2015-2019) matches the legacy site's vintage.
+  acs5_years: [2019, latest]
+  acs1_years: [latest]
+  # Suppress PUMS estimates whose denominator has fewer sample cases than this.
+  min_sample_cases: 30
+
+childcare:
+  # Facility list (schema: data/childcare/README.md). This is a SAMPLE
+  # PLACEHOLDER of fake facilities until real data is obtained.
+  facilities_csv: data/childcare/facilities_SAMPLE.csv
+  # "Nearby" supply: straight-line distance from each tract's interior point.
+  buffer_miles: 2
+  # NC State Plane (meters), used for distances and simplification.
+  projected_crs: 32119
+  simplify_meters: 25
+  market_rate:
+    monthly_dollars: 1400
+    label: >-
+      the NC DCDEE subsidized child care market rate for a 5-star center,
+      infant-toddler, Forsyth County, effective Oct 1, 2026 ($1,400/month)
+    source_url: https://ncchildcare.ncdhhs.gov/Home/DCDEE-Sections/Subsidy-Services/Market-Rates
+    source_file: Centers_Market_Rates_FINAL_9-17-2026-003.pdf
+    caveat: >-
+      Subsidy reimbursement rates reflect the highest of a 2021 statewide floor,
+      the 2023 county market rate and the current rate. They are not the
+      price every family pays.
+  thresholds:
+    # Fewer than 1 slot per 3 young children (33.3 per 100) is the common
+    # "child care desert" definition (Center for American Progress).
+    low_supply_slots_per_100: 33.3
+    # U.S. HHS treats child care costing 7% of family income or less as
+    # affordable (2016 CCDF rule).
+    affordable_pct_of_income: 7
+
 paths:
   cache_dir: data/cache/acs
   tableau_dir: outputs/tableau

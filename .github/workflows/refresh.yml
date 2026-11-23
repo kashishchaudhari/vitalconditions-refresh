@@ -1,0 +1,131 @@
+name: Refresh, validate and publish
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 6 5 * *"        # 06:00 UTC on the 5th of every month
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: refresh-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build and validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      CENSUS_API_KEY: ${{ secrets.CENSUS_API_KEY }}
+      RENV_CONFIG_PAK_ENABLED: "false"
+    outputs:
+      validation: ${{ steps.validation.outputs.status }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: System libraries for sf / spatial packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgdal-dev libgeos-dev libproj-dev libudunits2-dev libsqlite3-dev
+
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: renv
+          use-public-rspm: true
+
+      - uses: r-lib/actions/setup-renv@v2   # restores renv.lock and caches the library
+
+      - uses: quarto-dev/quarto-actions/setup@v2
+
+      - name: Month key for the Census cache
+        id: month
+        run: echo "key=$(date -u +%Y-%m)" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Census API responses
+        uses: actions/cache@v4
+        with:
+          path: data/cache
+          key: census-${{ steps.month.outputs.key }}-${{ hashFiles('config/*.yml') }}
+          restore-keys: |
+            census-${{ steps.month.outputs.key }}-
+            census-
+
+      - name: Offline tests (no API key needed)
+        run: Rscript tests/testthat.R
+
+      - name: Pipeline (pull, build, validate, render)
+        if: env.CENSUS_API_KEY != ''
+        run: Rscript run_pipeline.R
+
+      - name: Read validation status
+        id: validation
+        if: always() && env.CENSUS_API_KEY != ''
+        run: |
+          if [ -f outputs/validation/validation_summary.json ]; then
+            echo "status=$(jq -r .overall_status outputs/validation/validation_summary.json)" >> "$GITHUB_OUTPUT"
+          else
+            echo "status=missing" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Upload validation report
+        if: always() && env.CENSUS_API_KEY != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: validation-report
+          path: outputs/validation/
+          if-no-files-found: ignore
+
+      - name: Upload site for GitHub Pages
+        if: github.event_name != 'pull_request' && env.CENSUS_API_KEY != ''
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+      - name: Upload site for Vercel
+        if: github.event_name != 'pull_request' && env.CENSUS_API_KEY != '' && vars.ENABLE_VERCEL == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: site
+          path: _site
+
+  deploy-pages:
+    name: Deploy to GitHub Pages
+    needs: build
+    # Only after a passing validation, never for pull requests.
+    if: >-
+      github.event_name != 'pull_request' &&
+      (needs.build.outputs.validation == 'pass' || needs.build.outputs.validation == 'pass_with_warnings')
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
+
+  deploy-vercel:
+    name: Deploy to Vercel (optional)
+    needs: build
+    if: >-
+      vars.ENABLE_VERCEL == 'true' &&
+      github.event_name != 'pull_request' &&
+      (needs.build.outputs.validation == 'pass' || needs.build.outputs.validation == 'pass_with_warnings')
+    runs-on: ubuntu-latest
+    env:
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: site
+          path: _site
+      - name: Static deploy of _site
+        run: npx --yes vercel@latest deploy --prod --yes --token "${{ secrets.VERCEL_TOKEN }}"
