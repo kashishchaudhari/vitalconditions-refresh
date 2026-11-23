@@ -48,3 +48,6 @@ reports/*_files/
 
 .vercel
 .env*
+
+# Private build specification (kept locally, not published)
+BUILD_PROMPT.md

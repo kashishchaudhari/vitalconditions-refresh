@@ -23,7 +23,7 @@ confirmed before anyone relies on it.
 | Forsyth County has **95** census tracts in the 2020 tract vintage | Verified | Counted at run time from TIGER/Line 2024 cartographic boundary file (`tigris`), and it matches the 95 tracts in the 2020 tract-to-PUMA file. The pipeline never hard-codes this. |
 | Forsyth PUMAs (2020 definitions): **01801, 01802, 01803** (30, 31 and 34 tracts) | Verified | https://www2.census.gov/geo/docs/maps-data/data/rel2020/2020_Census_Tract_to_2020_PUMA.txt, filtered to state 37, county 067. |
 | Forsyth PUMAs (2010 definitions): **01801, 01802, 01803** (28, 31 and 34 tracts, 93 tracts total) | Verified | https://www2.census.gov/geo/docs/maps-data/data/rel/2010_Census_Tract_to_2010_PUMA.txt |
-| The three PUMAs cover **exactly** Forsyth County in both vintages | Verified | No other NC county has tracts in 01801-01803 in either file. **This differs from BUILD_PROMPT.md**, which says the PUMAs approximate the county. Geographically they match it. PUMS estimates still differ from published county tables because of sampling and disclosure-avoidance noise. Milestone 3 docs will say that, not that the geography is approximate. |
+| The three PUMAs cover **exactly** Forsyth County in both vintages | Verified | No other NC county has tracts in 01801-01803 in either file. **This differs from the original assumption** that the PUMAs only approximate the county. Geographically they match it. PUMS estimates still differ from published county tables because of sampling and disclosure-avoidance noise. Milestone 3 docs will say that, not that the geography is approximate. |
 | PUMA names | Not verified | The 2020 PUMA names PDF could not be read as text. To confirm in milestone 3. |
 | PUMS years and PUMA vintage: 1-year PUMS 2022+ and 5-year PUMS 2022+ use 2020 PUMAs | Assumed (standard Census practice) | To confirm in milestone 3. Because the codes are the same, a code-only join would hide the boundary change, so comparisons across it will be flagged. |
 
@@ -84,7 +84,7 @@ confirmed before anyone relies on it.
 
 | Item | Status | Evidence |
 |---|---|---|
-| Legacy vintage of each indicator | **Assumed** | Taken from BUILD_PROMPT.md ("economy and housing tables stop at 2021"; Child Housing Cost Burden on 2015-2019 PUMS). Each registry entry records `verified: false` until someone checks the live legacy page. |
+| Legacy vintage of each indicator | **Assumed** | Taken from the project brief (housing and economy indicators on 2021 data; Child Housing Cost Burden on 2015-2019 PUMS). Each registry entry records `verified: false` until someone checks the live legacy page. |
 | `config/legacy_reference.csv` | Empty (headers + TODO) | No published figures were captured. The legacy check reports this as a **warning**, not a pass. |
 
 ## Design choices that go beyond the spec

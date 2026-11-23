@@ -55,9 +55,7 @@ indicators:
       year: 2021
       survey: acs1
       verified: false
-      basis: >-
-        BUILD_PROMPT.md says the legacy economy and housing tables stop at
-        2021. Not yet checked against the live legacy page.
+      basis: Assumed from the project brief; not yet checked against the published pages.
     groups:
       - {group: "All households",                               table: B25003}
       - {group: "White alone",                                  table: B25003A}
@@ -115,7 +113,7 @@ indicators:
       year: 2021
       survey: acs1
       verified: false
-      basis: BUILD_PROMPT.md says legacy economy tables stop at 2021.
+      basis: Assumed from the project brief; not yet checked against the published pages.
     # B19013 holds the same medians as subject table S1903, but its variable
     # numbers never changed. S1903 moved medians from column C02 to C03 in 2017.
     groups:
@@ -157,7 +155,7 @@ indicators:
       year: 2021
       survey: acs1
       verified: false
-      basis: BUILD_PROMPT.md says legacy economy tables stop at 2021.
+      basis: Assumed from the project brief; not yet checked against the published pages.
     groups:
       - {group: "All households", table: B19080}
     components:
@@ -193,7 +191,7 @@ indicators:
       year: 2021
       survey: acs1
       verified: false
-      basis: BUILD_PROMPT.md says legacy housing tables stop at 2021.
+      basis: Assumed from the project brief; not yet checked against the published pages.
     groups:
       - {group: "All ages",                    table: B25007, components: {owner: ["002"], renter: ["012"], total: ["001"]}}
       - {group: "Householder under 25 (15 to 24)", table: B25007, components: {owner: ["003"], renter: ["013"], total: ["003", "013"]}}
@@ -248,7 +246,7 @@ indicators:
       year: 2021
       survey: acs1
       verified: false
-      basis: BUILD_PROMPT.md says legacy economy tables stop at 2021.
+      basis: Assumed from the project brief; not yet checked against the published pages.
     groups:
       - {group: "All people 16 and over",                         table: S2301, components: {lfpr: ["C02_001"], epop: ["C03_001"], unemp: ["C04_001"]}}
       - {group: "White alone",                                    table: S2301, components: {lfpr: ["C02_012"], epop: ["C03_012"], unemp: ["C04_012"]}}
@@ -287,7 +285,7 @@ indicators:
       year: 2021
       survey: acs1
       verified: false
-      basis: BUILD_PROMPT.md says legacy housing tables stop at 2021.
+      basis: Assumed from the project brief; not yet checked against the published pages.
     groups:
       - group: "Renter households"
         table: B25070
@@ -348,7 +346,7 @@ indicators:
       year: null
       survey: null
       verified: false
-      basis: Not stated in BUILD_PROMPT.md.
+      basis: Not known.
     groups:
       - {group: "All households", table: B08201}
     components:
@@ -374,7 +372,7 @@ indicators:
       year: null
       survey: null
       verified: false
-      basis: Not stated in BUILD_PROMPT.md.
+      basis: Not known.
     groups:
       - {group: "All people",                                   table: B17001}
       - {group: "White alone",                                  table: B17001A}
@@ -501,5 +499,5 @@ indicators:
     geographies: [puma]
     universe: Children under 18 in households
     disaggregations: [race_ethnicity, tenure]
-    legacy_vintage: {label: "2015-2019 ACS 5-year PUMS", year: 2019, survey: acs5, verified: false, basis: "BUILD_PROMPT.md"}
+    legacy_vintage: {label: "2015-2019 ACS 5-year PUMS", year: 2019, survey: acs5, verified: false, basis: "Assumed from the project brief; not yet checked"}
     notes: Built from PUMS microdata with replicate weights (milestone 3). The three PUMAs together cover exactly Forsyth County.

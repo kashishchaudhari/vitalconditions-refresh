@@ -10,7 +10,7 @@ A reproducible R pipeline that refreshes public indicators for Forsyth County, N
 
 ## Status
 
-All six milestones in [`BUILD_PROMPT.md`](BUILD_PROMPT.md) are built: 10 ACS indicators plus one PUMS indicator across five Vital Conditions, a tract-level childcare and housing affordability module, a blocking validation stage, a Quarto report and website, and a GitHub Actions workflow. Two things are still open: the **childcare supply data is a SAMPLE placeholder** (see [`data/childcare/README.md`](data/childcare/README.md)), and previously published reference figures have not been entered. [`docs/assumptions.md`](docs/assumptions.md) lists what was verified and what was assumed.
+All six planned milestones are built: 10 ACS indicators plus one PUMS indicator across five Vital Conditions, a tract-level childcare and housing affordability module, a blocking validation stage, a Quarto report and website, and a GitHub Actions workflow. Two things are still open: the **childcare supply data is a SAMPLE placeholder** (see [`data/childcare/README.md`](data/childcare/README.md)), and previously published reference figures have not been entered. [`docs/assumptions.md`](docs/assumptions.md) lists what was verified and what was assumed.
 
 | Vital Condition | Indicators |
 |---|---|
