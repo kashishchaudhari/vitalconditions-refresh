@@ -1,0 +1,16 @@
+---
+title: "Forsyth County Vital Conditions: indicator refresh"
+---
+
+This site holds **refreshed public indicators for Forsyth County, NC**, mapped to the Seven Vital Conditions for Wellbeing and Justice. Each number comes with its margin of error and a plain reliability flag, and every output is checked against the U.S. Census Bureau source before this site is published.
+
+::: {.callout-note}
+**Independent, unofficial prototype.** This site is not affiliated with or endorsed by Forsyth Futures. It uses only open public data and is offered as a *draft public resource*, not a finished community narrative.
+:::
+
+- **[Refresh summary](report.qmd):** what is newer than the legacy figures, trends by Vital Condition, and the childcare and housing tract maps.
+- **[Validation](validation.qmd):** every source-to-target check and its result.
+- **[Data downloads](downloads.qmd):** CSV and GeoJSON files ready for Tableau Public.
+- **[Limitations](limitations.qmd):** who this data leaves out, and how to read it.
+
+Code: <https://github.com/kashishchaudhari/vitalconditions-refresh>

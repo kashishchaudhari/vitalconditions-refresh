@@ -1,0 +1,13 @@
+---
+title: "Forsyth County Vital Conditions: indicator refresh summary"
+subtitle: "Draft public resource · independent, unofficial prototype"
+format:
+  html:
+    embed-resources: true
+    toc: true
+    toc-depth: 3
+execute:
+  echo: false
+---
+
+{{< include ../site/_summary_content.qmd >}}

@@ -43,8 +43,42 @@ confirmed before anyone relies on it.
 | Public downloadable statewide facility file (with coordinates) from NC DCDEE | **Not found** | The DCDEE Child Care Facility Search (https://ncchildcare.ncdhhs.gov/childcaresearch) works. For Forsyth it returned **151 facilities in 16 pages** with columns License Number, Facility Name, Address and Facility Type. There is **no CSV/Excel export** (only a Print button) and no coordinates. Capacity, star rating and ages served are on each facility's detail page. |
 | DCDEE "Child Care Statistic Report" | Verified: statewide aggregate only | https://ncchildcare.ncdhhs.gov/County/Child-Care-Snapshot/Child-Care-Statistic-Report lists only an April 2018 statewide summary PDF. County-level data goes through a DCDEE Data Request Portal (Qualtrics form). |
 | NC OneMap / ArcGIS Online statewide child care layer | Not found | An ArcGIS Online search for DCDEE / NC child care found only third-party layers: Buncombe County centers (2024), UNC student projects, and an NC Pre-K locations layer for 2025-26. None is an authoritative statewide licensed-facility file. HIFLD's hub URL returned 404. |
-| Plan | Design | Per the spec, Module B will **accept a CSV with a documented schema** (license number, name, address, lat/long or geocodable address, capacity, star rating, ages served). One public route to fill it is a DCDEE data request. Scraping the search tool was not attempted and may conflict with its terms. **Needs a decision.** |
-| NC child care market rates | Source verified, figure not extracted | Market Rates page (https://ncchildcare.ncdhhs.gov/Home/DCDEE-Sections/Subsidy-Services/Market-Rates) lists county rate tables effective Oct 1, 2026. The 2025 Market Rate Survey report is on https://ncchildcare.ncdhhs.gov/Provider/Child-Care-Subsidy/Market-Rate-Study. The Forsyth infant, 5-star center figure still needs to be read from the PDF (milestone 4). |
+| Plan | Design | Per the spec, Module B will **accept a CSV with a documented schema** (license number, name, address, lat/long or geocodable address, capacity, star rating, ages served). One public route to fill it is a DCDEE data request. Scraping the search tool was not attempted and may conflict with its terms. **Decided:** use a SAMPLE placeholder for now (see below). |
+| NC child care market rate for Forsyth | **Verified: $1,400/month** | From "Subsidized Child Care Market Rates for Child Care Centers, Effective October 1, 2026" (`Centers_Market_Rates_FINAL_9-17-2026-003.pdf`, linked from https://ncchildcare.ncdhhs.gov/Home/DCDEE-Sections/Subsidy-Services/Market-Rates). Forsyth row, Centers, Infant-Toddler: 1-star $433, 2-star $454, 3-star $1,127, 4-star $1,150, **5-star $1,400**. The module uses the 5-star rate (`config/pipeline.yml`, `childcare.market_rate`). **Caveat:** these are subsidy reimbursement rates. For 3-5 stars they are the highest of a 2021 statewide floor, the 2023 county market rate and the current rate, not a survey of prices every family pays. The Oct 1, 2023 table showed $1,036 for 5-star infant care. |
+| "Low supply" threshold (fewer than 1 slot per 3 children = 33.3 per 100) | Assumed, common definition | The "child care desert" definition popularised by the Center for American Progress. Configurable. |
+| "Affordable" threshold (7% of family income) | Assumed, common definition | The U.S. HHS benchmark from the 2016 CCDF rule. Configurable. Because $16,800 a year is above 7% of almost any tract's median family income, nearly every tract is "high cost". That is a real finding, not a bug. |
+
+## Table and variable choices (milestone 2)
+
+| Item | Status | Evidence |
+|---|---|---|
+| Subject tables renumber variables over time | **Verified** | Labels for every variable in every year from 2009 to 2025 were downloaded from the Census API `groups/<table>.json`. **S1903** moved median income from `C02` to `C03` in 2017 (`S1903_C02_001` became "percent distribution"). **S2301** `C02_001` was "in labor force" (a count) up to 2014 and "labor force participation rate" from 2015. Pulling one variable ID for every year would have mixed different things. |
+| Median household income uses **B19013 (+A-I)** instead of S1903 | Design (verified equivalent concept) | B19013 publishes the same medians and its variable IDs never changed from 2009 to 2025. |
+| Labor force uses **S2301 from 2015 on** (`first_year: 2015`) | Verified | Race rows `C0x_012`-`C0x_020`, men and women 20-64 (`022`, `023`) and women with children under 6 only (`025`) have stable labels from 2015 to 2025. Earlier years are left out rather than mixed in. |
+| All B tables used (B25003, B19013, B19080, B25007, B25070, B25091, B08201, B17001, B09001, B23008, B19113) have identical labels in every year | **Verified**, and re-checked automatically on every run | Ignoring punctuation and the dollar-year in income labels. New validation check `<indicator>__variable_labels`. |
+| B19080 and B08201 have no 2009 5-year release; B23025 starts 2011 | Verified (API 404) | `first_year: {acs5: 2010}` set for B19080 and B08201. B23025 is not used. |
+| Missing MOE now flags `use_with_caution` (not `reliable`) | Design change | Medians above $250,000 are top-coded and published without a MOE. Treating them as reliable would overstate certainty. |
+
+## PUMS (milestone 3)
+
+| Item | Status | Evidence |
+|---|---|---|
+| Latest PUMS: 1-year **2024**, 5-year **2020-2024** | Verified | `.../2024/acs/acs1/pums.json` and `.../acs5/pums.json` return 200, and 2025 returns 404. The 2025 1-year PUMS is not out yet, although the 2025 1-year tables are. The pipeline detects "latest" at run time. |
+| Vintages built: 5-year 2015-2019 (matches legacy), 5-year 2020-2024, 1-year 2024 | Design | `config/pipeline.yml` `pums:`. |
+| Household-type variable renamed `TYPE` (to 2019) to `TYPEHUGQ` (2020 on) | Verified | `tidycensus::pums_variables`. The code picks the right name by year. |
+| Cost burden for children: renters use `GRPIP`, owners `OCPIP`; blank means not computed (no income / no cash rent) | Verified (PUMS data dictionary via `pums_variables`) | Children in "occupied without payment of rent" homes (`TEN = 4`) are excluded, as in published tables. |
+| Standard errors: 80 person replicate weights, successive-difference replication (`scale = 4/80`, `mse = TRUE`) | Census-documented method | Recomputed independently in validation with plain sums. |
+| Race groups for PUMS combine AIAN, NHPI, other and multiracial (non-Hispanic) into one group | Design | Keeps the five groups mutually exclusive and large enough to estimate. Each is still flagged. |
+| PUMS sample-size rule: suppress when the denominator has fewer than 30 sample cases | Assumed (judgement) | `pums.min_sample_cases`. |
+
+## Childcare module decisions (your answers, 2026-11-23)
+
+- **Extra output columns:** kept.
+- **Facility data:** build with a clearly labelled SAMPLE placeholder (`data/childcare/facilities_SAMPLE.csv`, fake points) until real data is obtained. Every Module B output carries `data_status = SAMPLE...`.
+- **Hand-edited outputs:** the pipeline rebuilding them from source is acceptable.
+- "Nearby" supply uses a straight-line buffer (default 2 miles) around each tract's interior point. Drive-time catchments would need a routing service and are not implemented.
+- Licensed capacity counts all ages, so slots per 100 children under 5 overstates infant and toddler supply. `serves_infants` is carried for future use.
+- Context layer: TIGER/Line incorporated places (towns and cities) stand in for MapForsyth municipal limits. HOLC redlining boundaries were not added. Both are optional in the spec.
 
 ## Legacy vintages and reference figures
 

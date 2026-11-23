@@ -1,0 +1,127 @@
+```{r}
+#| label: setup
+#| include: false
+# Shared by site/report.qmd and reports/refresh_summary.qmd (both one folder
+# below the project root).
+root <- normalizePath("..")
+for (f in list.files(file.path(root, "R"), pattern = "\\.R$", full.names = TRUE)) source(f)
+suppressPackageStartupMessages({ library(dplyr); library(ggplot2) })
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE, fig.width = 9, dpi = 110)
+tab_dir <- file.path(root, "outputs", "tableau")
+registry <- read_registry(file.path(root, "config", "indicators.yml"))
+all_out <- read_output_csv(file.path(tab_dir, "all_indicators.csv"))
+stale <- readr::read_csv(file.path(tab_dir, "staleness_report.csv"), show_col_types = FALSE)
+val <- jsonlite::read_json(file.path(root, "outputs", "validation", "validation_summary.json"))
+
+# TODO(FFTemplates): forsythfuture/FFTemplates has no ggplot2 theme or colour
+# functions (only R Markdown templates), so a neutral theme is used. Swap in
+# Forsyth Futures' colours here if they want a house style.
+theme_vc <- function() {
+  theme_minimal(base_size = 12) +
+    theme(panel.grid.minor = element_blank(), legend.position = "bottom",
+          plot.title.position = "plot", strip.text = element_text(face = "bold"))
+}
+flag_shapes <- c(reliable = 16, use_with_caution = 1)
+```
+
+::: {.callout-warning}
+**Independent, unofficial prototype.** This is not affiliated with or endorsed by Forsyth Futures. It is a draft public resource built only from open public data. Every number carries a reliability flag. Suppressed values are hidden from the charts, and "use with caution" values are drawn as open circles.
+:::
+
+Data run on **`r substr(val$run_time_utc, 1, 10)`**. Newest ACS releases: 1-year **`r val$acs_vintages$acs1_latest`**, 5-year **`r acs_period_label("acs5", val$acs_vintages$acs5_latest)`**. Validation: **`r toupper(gsub("_", " ", val$overall_status))`** (`r val$counts$pass` checks passed, `r val$counts$warn` warnings, `r val$counts$fail` failures).
+
+## What changed: legacy vintage to newest data
+
+```{r}
+#| label: staleness
+stale |>
+  transmute(Indicator = indicator_name, `Vital Condition` = vital_condition,
+            `Legacy site shows` = legacy_vintage,
+            `Legacy verified?` = ifelse(legacy_vintage_verified, "yes", "not yet"),
+            `Refreshed to` = refreshed_vintage,
+            `Years newer` = years_newer,
+            `% reliable` = pct_reliable, `% caution` = pct_use_with_caution, `% suppressed` = pct_suppress) |>
+  knitr::kable()
+```
+
+## Trends by Vital Condition
+
+County trends use 1-year ACS data (5-year for the PUMS indicator). There is no 2020 point: the Census Bureau released no standard 2020 1-year data. Shaded bands show the 90% margin of error.
+
+```{r}
+#| label: trends
+#| results: asis
+#| fig-height: 5.5
+headline <- function(spec, d) {
+  ms <- unique(d$measure[d$indicator_id == spec$id])
+  units <- d$unit[match(ms, d$measure)]
+  pick <- spec$headline_measure %||% c(ms[units == "percent"], ms[units == "dollars"], ms)[1]
+  pick
+}
+trend <- all_out |> filter(geography %in% c("county", "county_pums"), include_in_trend)
+for (vc in VITAL_CONDITIONS) {
+  ids <- unique(trend$indicator_id[trend$vital_condition == vc])
+  if (!length(ids)) next
+  cat("\n\n### ", vc, "\n\n", sep = "")
+  for (id in ids) {
+    spec <- registry[[id]]
+    d <- trend |> filter(indicator_id == id)
+    m <- headline(spec, d)
+    survey <- if (any(d$vintage_type == "acs1" & d$measure == m) && spec$source != "pums") "acs1" else "acs5"
+    d <- d |> filter(measure == m, vintage_type == survey) |>
+      mutate(shown = ifelse(reliability_flag == "suppress", NA_real_, estimate),
+             era = ifelse(year < 2020, "before", "after"))
+    if (all(is.na(d$shown))) next
+    keep_groups <- d |> group_by(group) |> summarise(ok = any(!is.na(shown))) |> filter(ok) |> pull(group)
+    d <- filter(d, group %in% keep_groups)
+    order <- if (!is.null(spec$groups)) purrr::map_chr(spec$groups, "group") else unique(d$group)
+    d$group <- factor(d$group, levels = unique(c(order, unique(d$group))))
+    p <- ggplot(d, aes(year, shown)) +
+      geom_ribbon(aes(ymin = shown - moe, ymax = shown + moe, group = era), fill = "grey80", alpha = 0.6) +
+      geom_line(aes(group = era), colour = "#2b6cb0") +
+      geom_point(aes(shape = reliability_flag), colour = "#2b6cb0", size = 1.8, na.rm = TRUE) +
+      scale_shape_manual(values = flag_shapes, drop = FALSE,
+                         labels = c(reliable = "Reliable", use_with_caution = "Use with caution"), name = NULL) +
+      facet_wrap(~ group, labeller = label_wrap_gen(28)) +
+      labs(title = spec$name, subtitle = paste0(d$measure_label[1], " · ", ifelse(survey == "acs1", "ACS 1-year", "ACS 5-year")),
+           x = NULL, y = NULL,
+           caption = "Suppressed estimates (CV > 30% or too few cases) are not shown.") +
+      theme_vc()
+    if (unique(d$unit) == "dollars") p <- p + scale_y_continuous(labels = scales::label_dollar())
+    print(p)
+    cat("\n\n")
+  }
+}
+```
+
+## Childcare and housing affordability by census tract
+
+```{r}
+#| label: map-setup
+geo <- sf::st_read(file.path(root, "outputs", "geo", "affordability_gap.geojson"), quiet = TRUE)
+is_sample <- any(grepl("SAMPLE", geo$data_status))
+cc <- read_config(file.path(root, "config", "pipeline.yml"))$childcare
+```
+
+`r if (is_sample) "::: {.callout-important}\n**The supply map uses PLACEHOLDER SAMPLE facilities, not real child care data.** It shows how the module works. The pattern is meaningless until real facility data is loaded (see data/childcare/README.md).\n:::" else ""`
+
+The three measures are shown side by side on purpose and are never combined into a score. Grey tracts are too uncertain to report.
+
+```{r}
+#| label: maps
+#| fig-height: 6
+map_one <- function(col, flag, title, lab) {
+  g <- geo; g$value <- ifelse(g[[flag]] == "suppress", NA, g[[col]])
+  ggplot(g) + geom_sf(aes(fill = value), colour = "white", linewidth = 0.1) +
+    scale_fill_viridis_c(option = "cividis", na.value = "grey85", name = lab, direction = -1) +
+    labs(title = title) + theme_void(base_size = 11) + theme(legend.position = "bottom")
+}
+print(map_one("slots_per_100_children_buffer", "slots_per_100_children_buffer_flag",
+              paste0("Licensed slots per 100 children under 5, within ", cc$buffer_miles, " miles", if (is_sample) " (SAMPLE DATA)" else ""),
+              "Slots per 100"))
+print(map_one("infant_care_cost_pct_of_income", "infant_care_cost_pct_of_income_flag",
+              paste0("Infant center care ($", format(12 * cc$market_rate$monthly_dollars, big.mark = ","),
+                     "/year) as % of tract median family income"), "% of income"))
+print(map_one("renter_cost_burden_pct", "renter_cost_burden_pct_flag",
+              "Renters paying 30% or more of income on housing", "% of renters"))
+```

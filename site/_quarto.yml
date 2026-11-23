@@ -1,0 +1,32 @@
+project:
+  type: website
+  output-dir: ../_site
+  resources:
+    - data/**
+
+# The pipeline writes _build_info.yml (run date, commit, ACS vintages,
+# validation status) and the page footer is built from it.
+metadata-files:
+  - _build_info.yml
+
+website:
+  title: "Forsyth Vital Conditions: Indicator Refresh (prototype)"
+  navbar:
+    left:
+      - href: index.qmd
+        text: Home
+      - href: report.qmd
+        text: Refresh summary
+      - href: validation.qmd
+        text: Validation
+      - href: downloads.qmd
+        text: Data downloads
+      - href: limitations.qmd
+        text: Limitations
+
+format:
+  html:
+    theme: cosmo
+    toc: true
+execute:
+  echo: false

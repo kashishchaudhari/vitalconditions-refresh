@@ -1,0 +1,41 @@
+---
+title: "Validation"
+---
+
+```{r}
+#| include: false
+root <- normalizePath("..")
+val <- jsonlite::read_json(file.path(root, "outputs", "validation", "validation_summary.json"), simplifyVector = TRUE)
+```
+
+Before anything is published, every output is checked against its source (the Census API responses and the PUMS microdata). Any **failure** stops the pipeline and blocks publishing. **Warnings** are published with an explanation.
+
+**Overall: `r toupper(gsub("_", " ", val$overall_status))`.** `r val$counts$pass` checks passed, `r val$counts$warn` gave warnings, and `r val$counts$fail` failed (run `r val$run_time_utc`).
+
+[Open the full validation report (pointblank)](data/validation_report.html) · [validation_summary.json](data/validation_summary.json)
+
+```{r}
+chk <- val$checks
+by_cat <- aggregate(cbind(pass = chk$status == "pass", warn = chk$status == "warn",
+                          fail = chk$status == "fail") ~ category, data = chk, FUN = sum)
+knitr::kable(by_cat, caption = "Checks by category")
+```
+
+### Warnings and failures
+
+```{r}
+nw <- chk[chk$status != "pass", c("check_id", "step", "n_failed", "status", "note")]
+if (nrow(nw)) knitr::kable(nw, row.names = FALSE) else cat("None.")
+```
+
+### What each category checks
+
+| Category | What it checks |
+|---|---|
+| completeness | Every expected row, group and tract is present (tracts counted from TIGER/Line) |
+| source_match | Every directly-sourced value equals the saved Census response, and variable labels mean the same thing in every year |
+| reconciliation | A random 5% sample (at least 25 rows) re-pulled live through a separate code path matches exactly |
+| derived | Percentages, MOEs, SEs, CVs and reliability flags recomputed from their parts |
+| consistency | Parts sum to totals within MOE, numerator ≤ denominator, PUMS totals match published ACS (±2%) |
+| rules | Schema and types, value ranges, required fields, no 2020 1-year data in trends, valid EPSG:4326 geometry |
+| legacy | Comparison with previously published figures (warnings only) |

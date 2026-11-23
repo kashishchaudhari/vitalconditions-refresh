@@ -35,3 +35,10 @@ outputs/tableau/*
 outputs/validation/*
 outputs/geo/*
 !outputs/**/.gitkeep
+
+# Generated site inputs and report
+site/data/
+site/_build_info.yml
+site/.quarto/
+reports/*.html
+reports/*_files/

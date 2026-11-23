@@ -1,0 +1,31 @@
+---
+title: "Data downloads"
+---
+
+All files are free to use. Please cite the U.S. Census Bureau American Community Survey as the source and keep the `reliability_flag` with the numbers.
+
+```{r}
+#| include: false
+root <- normalizePath("..")
+files <- list.files(file.path(root, "site", "data"), full.names = TRUE)
+info <- data.frame(file = basename(files), size_kb = round(file.size(files) / 1024))
+```
+
+| File | What it holds |
+|---|---|
+| [all_indicators.csv](data/all_indicators.csv) | Every indicator, county and tracts, all years, long format |
+| [trends_county.csv](data/trends_county.csv) | County rows safe for trend charts (no 2020 1-year) |
+| [staleness_report.csv](data/staleness_report.csv) | Legacy vintage vs newest vintage for each indicator |
+| [affordability_gap_tracts.csv](data/affordability_gap_tracts.csv) | Childcare and housing affordability, one row per tract |
+| [affordability_gap.geojson](data/affordability_gap.geojson) | The same, with simplified tract boundaries (EPSG:4326) |
+| [childcare_facilities.geojson](data/childcare_facilities.geojson) | Facility points (**currently SAMPLE placeholder data**) |
+| [municipal_boundaries.geojson](data/municipal_boundaries.geojson) | Towns and cities (TIGER/Line places), for context |
+
+Each indicator also has its own CSV:
+
+```{r}
+ind <- info[grepl("[.]csv$", info$file) & !info$file %in% c("all_indicators.csv", "trends_county.csv", "staleness_report.csv", "affordability_gap_tracts.csv"), ]
+knitr::kable(data.frame(File = sprintf("[%s](data/%s)", ind$file, ind$file), `Size (KB)` = ind$size_kb, check.names = FALSE), row.names = FALSE)
+```
+
+Column definitions and Tableau Public steps are in [docs/tableau_build.md](https://github.com/kashishchaudhari/vitalconditions-refresh/blob/main/docs/tableau_build.md).
