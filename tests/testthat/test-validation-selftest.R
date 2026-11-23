@@ -91,3 +91,14 @@ test_that("the gate stops the pipeline on any failure", {
   bad <- ok; bad$summary$status <- "fail"; bad$summary$n_failed <- 3L
   expect_error(validation_gate(bad), "Publishing is blocked")
 })
+
+test_that("a variable whose label changes between years fails the label check", {
+  cfg <- fixture_cfgs(); spec <- fixture_spec()
+  lab <- fixture_labels(spec)
+  i <- which(lab$variable == "B25003_002" & lab$year == 2019)
+  lab$label[i] <- "Estimate!!Percent distribution!!Households"   # renumbered table
+  chk <- check_label_consistency(spec, lab, fixture_vintages(), cfg$pipeline)
+  expect_equal(failed_units(chk), 1)
+  ok <- check_label_consistency(spec, fixture_labels(spec), fixture_vintages(), cfg$pipeline)
+  expect_equal(failed_units(ok), 0)
+})

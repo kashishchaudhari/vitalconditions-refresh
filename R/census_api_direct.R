@@ -12,15 +12,20 @@
 direct_acs_fetch <- function(variables, survey, year, geography, area,
                              key = Sys.getenv("CENSUS_API_KEY")) {
   if (!nzchar(key)) stop("CENSUS_API_KEY is needed for the reconciliation re-pull.", call. = FALSE)
-  chunks <- split(unique(variables), ceiling(seq_along(unique(variables)) / 24))
+  variables <- unique(variables)
+  # Subject tables (S...) live under a different API path.
+  kind <- ifelse(startsWith(variables, "S"), "/subject", "")
+  chunks <- unlist(lapply(split(variables, kind), function(v) split(v, ceiling(seq_along(v) / 24))),
+                   recursive = FALSE)
   geo <- switch(geography,
     county = sprintf("for=county:%s&in=state:%s", area$county_fips, area$state_fips),
     tract  = sprintf("for=tract:*&in=state:%s%%20county:%s", area$state_fips, area$county_fips),
     stop("Unsupported geography: ", geography))
   purrr::map_dfr(chunks, function(v) {
     get <- paste(c(paste0(v, "E"), paste0(v, "M")), collapse = ",")
+    path <- if (startsWith(v[1], "S")) paste0(survey, "/subject") else survey
     url <- sprintf("https://api.census.gov/data/%d/acs/%s?get=%s&%s&key=%s",
-                   year, survey, get, geo, key)
+                   year, path, get, geo, key)
     res <- curl::curl_fetch_memory(url)
     if (res$status_code != 200) {
       stop("Direct Census API request failed (HTTP ", res$status_code, ") for ",

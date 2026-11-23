@@ -75,24 +75,46 @@ check_completeness_tracts <- function(spec, out, tract_geoids, tract_year) {
 
 # 2a. Every directly-sourced value equals the raw API pull ------------------
 
+#' Components rebuilt straight from the raw pull (sums use moe_sum).
+source_components <- function(spec, raw) {
+  vars <- indicator_variables(spec)
+  raw |>
+    dplyr::inner_join(vars, by = "variable", relationship = "many-to-many") |>
+    dplyr::group_by(vintage_type = survey, year = as.integer(year), geography,
+                    geoid = GEOID, group, component) |>
+    dplyr::summarise(
+      n_vars = dplyr::n(),
+      src_e = if (anyNA(estimate)) NA_real_ else sum(estimate),
+      src_m = if (dplyr::n() == 1) moe[1] else if (anyNA(estimate)) NA_real_
+              else tidycensus::moe_sum(moe, estimate),
+      .groups = "drop")
+}
+
+direct_measures <- function(spec) {
+  purrr::map_dfr(purrr::keep(spec$measures, ~ .x$type %in% c("count", "value")),
+                 ~ tibble::tibble(measure = .x$id, component = .x$component))
+}
+
 check_source_match <- function(spec, out, raw) {
-  count_rows <- dplyr::filter(out, unit == "count", !grepl("+", source_variables, fixed = TRUE))
-  src <- raw |>
-    dplyr::transmute(vintage_type = survey, year = as.integer(year), geography,
-                     geoid = GEOID, source_variables = variable,
-                     estimate_src = estimate, moe_src = moe)
-  units <- count_rows |>
-    dplyr::select(dplyr::all_of(OUTPUT_KEY), source_variables, estimate, moe) |>
-    dplyr::left_join(src, by = c("vintage_type", "year", "geography", "geoid", "source_variables")) |>
-    dplyr::mutate(pass = same_value(estimate, estimate_src) & same_value(moe, moe_src))
+  src <- source_components(spec, raw)
+  units <- out |>
+    dplyr::inner_join(direct_measures(spec), by = "measure") |>
+    dplyr::select(dplyr::all_of(OUTPUT_KEY), component, source_variables, estimate, moe) |>
+    dplyr::left_join(src, by = c("vintage_type", "year", "geography", "geoid", "group", "component")) |>
+    dplyr::mutate(pass = !is.na(n_vars) &
+                    near_value(estimate, src_e, 1e-9) & near_value(moe, src_m, 1e-9))
   check_result(
     paste0(spec$id, "__source_match"), "source_match", spec$id,
-    sprintf("%s: every directly-sourced estimate and MOE in the output (%d rows) is identical to the Census API response saved at pull time.",
+    sprintf("%s: every directly-sourced estimate and MOE in the output (%d rows) equals the Census API response saved at pull time (exactly for single variables; sums of several variables within 1e-9).",
             spec$name, nrow(units)),
     units)
 }
 
 same_value <- function(a, b) (is.na(a) & is.na(b)) | (!is.na(a) & !is.na(b) & a == b)
+near_value <- function(a, b, tol) (is.na(a) & is.na(b)) | (!is.na(a) & !is.na(b) & abs(a - b) <= tol)
+
+#' Rows that are a single Census variable (no sum, no ratio).
+is_direct_row <- function(source_variables) !grepl("[+/(]", source_variables)
 
 # 2b. Independent re-pull of a random sample ----------------------------------
 
@@ -105,7 +127,7 @@ reconciliation_seed <- function(csv_path, seed_cfg) {
 }
 
 sample_for_reconciliation <- function(out, fraction, min_rows, seed) {
-  direct <- dplyr::filter(out, unit == "count", !grepl("+", source_variables, fixed = TRUE))
+  direct <- dplyr::filter(out, is_direct_row(source_variables))
   n <- min(nrow(direct), max(min_rows, ceiling(fraction * nrow(direct))))
   withr::with_seed(seed, dplyr::slice_sample(direct, n = n))
 }
@@ -155,7 +177,7 @@ recompute_flag <- function(estimate, moe, base, rel) {
       if (is.na(estimate[i])) "suppress"
       else if (!is.na(base[i]) && base[i] < rel$min_denominator) "suppress"
       else if (estimate[i] == 0) "suppress"
-      else if (is.na(moe[i])) "reliable"
+      else if (is.na(moe[i])) "use_with_caution"
       else if (cv[i] < rel$reliable_cv_max) "reliable"
       else if (cv[i] <= rel$caution_cv_max) "use_with_caution"
       else "suppress"
@@ -164,14 +186,9 @@ recompute_flag <- function(estimate, moe, base, rel) {
 }
 
 check_derived <- function(spec, out, raw, pipeline_cfg, tol) {
-  vars <- indicator_variables(spec)
-  src <- raw |>
-    dplyr::inner_join(vars, by = "variable", relationship = "many-to-many") |>
-    dplyr::group_by(vintage_type = survey, year = as.integer(year), geography,
-                    geoid = GEOID, group, component) |>
-    dplyr::summarise(e = if (anyNA(estimate)) NA_real_ else sum(estimate),
-                     m = if (dplyr::n() == 1) moe[1] else tidycensus::moe_sum(moe, estimate),
-                     .groups = "drop")
+  src <- source_components(spec, raw) |>
+    dplyr::select(-n_vars) |>
+    dplyr::rename(e = src_e, m = src_m)
   pct <- purrr::keep(spec$measures, ~ .x$type == "percent")
   base <- purrr::map_dfr(pct, function(msr) {
     n <- dplyr::filter(src, component == msr$numerator) |> dplyr::select(-component)
@@ -184,6 +201,11 @@ check_derived <- function(spec, out, raw, pipeline_cfg, tol) {
                                      recompute_prop_moe(e_n, e_d, m_n, m_d) * 100),
                     base = e_d)
   })
+  if (nrow(base) == 0) {
+    base <- tibble::tibble(vintage_type = character(), year = integer(), geography = character(),
+                           geoid = character(), group = character(), measure = character(),
+                           exp_estimate = numeric(), exp_moe = numeric(), base = numeric())
+  }
   rel <- pipeline_cfg$reliability
   near <- function(a, b) (is.na(a) & is.na(b)) | (!is.na(a) & !is.na(b) & abs(a - b) <= tol)
   units <- out |>
@@ -191,8 +213,9 @@ check_derived <- function(spec, out, raw, pipeline_cfg, tol) {
                                    exp_estimate, exp_moe, base),
                      by = c("vintage_type", "year", "geography", "geoid", "group", "measure")) |>
     dplyr::mutate(
-      exp_estimate = ifelse(unit == "percent", exp_estimate, estimate),
-      exp_moe = ifelse(unit == "percent", exp_moe, moe),
+      derived = measure %in% purrr::map_chr(pct, "id"),
+      exp_estimate = ifelse(derived, exp_estimate, estimate),
+      exp_moe = ifelse(derived, exp_moe, moe),
       exp_se = exp_moe / 1.645,
       exp_cv = ifelse(!is.na(exp_estimate) & exp_estimate > 0, exp_se / exp_estimate * 100, NA_real_),
       exp_flag = recompute_flag(exp_estimate, exp_moe, base, rel),
@@ -212,10 +235,8 @@ check_derived <- function(spec, out, raw, pipeline_cfg, tol) {
 
 #' Output count rows, one column per component (estimate) and _moe.
 component_wide <- function(spec, out) {
-  map <- purrr::map_dfr(purrr::keep(spec$measures, ~ .x$type == "count"),
-                        ~ tibble::tibble(measure = .x$id, component = .x$component))
   out |>
-    dplyr::inner_join(map, by = "measure") |>
+    dplyr::inner_join(direct_measures(spec), by = "measure") |>
     dplyr::select(vintage_type, year, geography, geoid, group, component, estimate, moe)
 }
 
@@ -283,6 +304,26 @@ check_consistency <- function(spec, out, validation_cfg) {
       sprintf("%s: every percentage's numerator is no larger than its denominator.", spec$name),
       u)
   }
+
+  # d) values that must rise in order (e.g. income quintile upper limits)
+  for (chk in spec$checks$ordered) {
+    u <- comp |>
+      dplyr::filter(component %in% chk$components) |>
+      dplyr::mutate(pos = match(component, chk$components)) |>
+      dplyr::group_by(dplyr::across(dplyr::all_of(key))) |>
+      dplyr::arrange(pos, .by_group = TRUE) |>
+      dplyr::summarise(n = dplyr::n(), values = paste(estimate, collapse = " < "),
+                       pass = if (n != length(chk$components)) FALSE
+                              else if (anyNA(estimate)) NA
+                              else all(diff(estimate) > 0),
+                       .groups = "drop")
+    results[[length(results) + 1]] <- check_result(
+      paste0(spec$id, "__ordered_", paste(chk$components, collapse = "_")),
+      "consistency", spec$id,
+      sprintf("%s: %s rise in that order for every place and year.",
+              spec$name, paste(chk$components, collapse = " < ")),
+      u)
+  }
   results
 }
 
@@ -310,7 +351,7 @@ check_legacy <- function(all_out, legacy, validation_cfg) {
 
 # Everything for one indicator -------------------------------------------------
 
-run_indicator_checks <- function(spec, csv_path, raw, vintages, tracts, pipeline_cfg,
+run_indicator_checks <- function(spec, csv_path, raw, labels, vintages, tracts, pipeline_cfg,
                                  validation_cfg, fetch = direct_acs_fetch) {
   out <- read_output_csv(csv_path)
   tract_year <- latest_vintage(vintages, "acs5")
@@ -320,6 +361,7 @@ run_indicator_checks <- function(spec, csv_path, raw, vintages, tracts, pipeline
       check_completeness_rows(spec, out, expected),
       check_completeness_tracts(spec, out, tracts$geoid, tract_year),
       check_source_match(spec, out, raw),
+      check_label_consistency(spec, labels, vintages, pipeline_cfg),
       check_reconciliation(spec, out, csv_path, validation_cfg, pipeline_cfg, fetch = fetch),
       check_derived(spec, out, raw, pipeline_cfg, validation_cfg$derived$tolerance)
     ),

@@ -38,10 +38,12 @@ build_components <- function(spec, raw) {
   raw |>
     dplyr::inner_join(vars, by = "variable", relationship = "many-to-many") |>
     dplyr::group_by(survey, year, geography, GEOID, NAME, group, table, component) |>
+    # MOE first: summarise() evaluates in order, and moe_sum() needs the
+    # individual estimates (it counts only the largest MOE among zeros).
     dplyr::summarise(
-      estimate = if (anyNA(estimate)) NA_real_ else sum(estimate),
       moe = if (dplyr::n() == 1) moe[1] else if (anyNA(estimate)) NA_real_
             else tidycensus::moe_sum(moe, estimate),
+      estimate = if (anyNA(estimate)) NA_real_ else sum(estimate),
       source_variables = paste(sort(variable), collapse = "+"),
       .groups = "drop"
     )
@@ -51,12 +53,15 @@ build_components <- function(spec, raw) {
 build_measures <- function(spec, comps) {
   key <- c("survey", "year", "geography", "GEOID", "NAME", "group", "table")
   purrr::map_dfr(spec$measures, function(m) {
-    if (m$type == "count") {
+    note <- m$note %||% NA_character_
+    if (m$type %in% c("count", "value")) {
       comps |>
         dplyr::filter(component == m$component) |>
         dplyr::transmute(dplyr::across(dplyr::all_of(key)), estimate, moe,
                          base = NA_real_, source_variables,
-                         measure = m$id, measure_label = m$label, unit = "count")
+                         measure = m$id, measure_label = m$label,
+                         unit = if (m$type == "count") "count" else m$unit,
+                         measure_note = note)
     } else {
       num <- dplyr::filter(comps, component == m$numerator)
       den <- dplyr::filter(comps, component == m$denominator)
@@ -72,7 +77,8 @@ build_measures <- function(spec, comps) {
           base = estimate_den,
           source_variables = paste0("(", source_variables_num, ") / (",
                                     source_variables_den, ")"),
-          measure = m$id, measure_label = m$label, unit = "percent"
+          measure = m$id, measure_label = m$label, unit = "percent",
+          measure_note = note
         )
     }
   })
@@ -104,7 +110,7 @@ build_indicator_table <- function(spec, raw, pipeline_cfg) {
         survey == "acs1" & year %in% c(2019, 2021) ~ TREND_NOTE_2020,
         TRUE ~ NA_character_
       ),
-      notes = paste_notes(reliability_note, trend_note)
+      notes = paste_notes(reliability_note, measure_note, trend_note)
     ) |>
     dplyr::arrange(geography, vintage_type, year, geoid,
                    match(group, group_order), match(measure, measure_order))

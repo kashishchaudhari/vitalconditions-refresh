@@ -15,7 +15,7 @@ test_that("CV and reliability flags follow the configured thresholds", {
     "suppress",  # zero estimate
     "suppress",  # not published
     "suppress",  # base below min_denominator
-    "reliable"   # no MOE published (controlled)
+    "use_with_caution"   # no MOE published (top-coded or controlled)
   ))
   expect_true(all(!is.na(out$reliability_flag)))
 })
@@ -39,4 +39,17 @@ test_that("built table has the output schema and a flag on every row", {
   expect_identical(names(out), names(OUTPUT_SCHEMA))
   expect_false(anyNA(out$reliability_flag))
   expect_false(any(out$vintage_type == "acs1" & out$year == 2020))
+})
+
+test_that("summed components use moe_sum on the individual estimates (zero rule)", {
+  # Regression test: MOE must be computed before the estimate is summed.
+  spec <- list(groups = list(list(group = "All", table = "B99999")),
+               components = list(both = c("001", "002", "003")))
+  raw <- tibble::tibble(survey = "acs5", year = 2024L, geography = "tract", GEOID = "1", NAME = "x",
+                        variable = c("B99999_001", "B99999_002", "B99999_003"),
+                        estimate = c(10, 0, 0), moe = c(5, 12, 20))
+  comp <- build_components(spec, raw)
+  expect_equal(comp$estimate, 10)
+  expect_equal(comp$moe, tidycensus::moe_sum(c(5, 12, 20), c(10, 0, 0)))   # sqrt(5^2 + 20^2)
+  expect_equal(comp$moe, sqrt(5^2 + 20^2))
 })

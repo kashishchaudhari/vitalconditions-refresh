@@ -7,9 +7,10 @@
 # To add a new ACS indicator, copy an active entry and change:
 #   id, name, vital_condition, universe, groups (one ACS table per group),
 #   components (the variable numbers inside each table) and measures.
-# Validation checks (completeness, source match, re-pull, recomputation of
-# percentages, numerator <= denominator, and any `checks` you list) are
-# generated automatically from the entry.
+# Validation checks (completeness, source match, variable-label consistency
+# across years, re-pull, recomputation of percentages, numerator <=
+# denominator, and any `checks` you list) are generated automatically from
+# the entry.
 #
 # Fields
 #   id               short machine name, lowercase_with_underscores
@@ -24,9 +25,18 @@
 #   groups           list of {group, table}; the table holds that group's data
 #   components       name -> variable number(s) in each group's table; several
 #                    numbers are summed (MOE combined with moe_sum)
-#   measures         what is published: type count (one component) or
-#                    percent (numerator / denominator components x 100)
-#   checks           optional internal-consistency checks
+#   first_year       optional {acs1: YYYY, acs5: YYYY}: earliest year to pull
+#                    (use when a table starts later or was renumbered)
+#   measures         what is published:
+#                      type count   - one component, a count of people/households
+#                      type value   - one component published as-is, with
+#                                     unit count, percent or dollars
+#                      type percent - numerator / denominator components x 100
+#                                     (both must also be published as counts)
+#                    optional `note` is added to every row's notes column
+#   groups[].components  optional per-group override of `components`
+#   checks           optional internal-consistency checks:
+#                      parts_equal_total, subgroups_sum_to_total, ordered
 #   notes            anything a reader should know
 
 indicators:
@@ -91,11 +101,399 @@ indicators:
       Native, Native Hawaiian and Other Pacific Islander) are often
       suppressed, especially in 1-year data and at tract level.
 
-  # ---- Planned (milestone 2 and 3). Table IDs listed; variable numbers will
-  # ---- be verified against the Census API variable lists before activation.
+  - id: median_household_income
+    status: active
+    name: Median household income by race and ethnicity of householder
+    vital_condition: Meaningful Work & Wealth
+    source: acs
+    surveys: [acs1, acs5]
+    geographies: [county, tract]
+    universe: Households
+    disaggregations: [race_ethnicity]
+    legacy_vintage:
+      label: "2021 ACS"
+      year: 2021
+      survey: acs1
+      verified: false
+      basis: BUILD_PROMPT.md says legacy economy tables stop at 2021.
+    # B19013 holds the same medians as subject table S1903, but its variable
+    # numbers never changed. S1903 moved medians from column C02 to C03 in 2017.
+    groups:
+      - {group: "All households",                               table: B19013}
+      - {group: "White alone",                                  table: B19013A}
+      - {group: "Black or African American alone",              table: B19013B}
+      - {group: "American Indian and Alaska Native alone",      table: B19013C}
+      - {group: "Asian alone",                                  table: B19013D}
+      - {group: "Native Hawaiian and Other Pacific Islander alone", table: B19013E}
+      - {group: "Some other race alone",                        table: B19013F}
+      - {group: "Two or more races",                            table: B19013G}
+      - {group: "White alone, not Hispanic or Latino",          table: B19013H}
+      - {group: "Hispanic or Latino (any race)",                table: B19013I}
+    components:
+      median: ["001"]
+    measures:
+      - id: median_household_income
+        label: "Median household income (dollars)"
+        type: value
+        unit: dollars
+        component: median
+        note: "In that survey year's dollars, not adjusted for inflation."
+    notes: >-
+      Groups are by the race or ethnicity of the householder. Medians cannot be
+      added up or averaged across groups.
+
+  - id: household_income_quintiles
+    status: active
+    name: Household income quintile upper limits
+    vital_condition: Meaningful Work & Wealth
+    source: acs
+    surveys: [acs1, acs5]
+    first_year: {acs5: 2010}
+    geographies: [county]
+    universe: Households
+    disaggregations: []
+    legacy_vintage:
+      label: "2021 ACS"
+      year: 2021
+      survey: acs1
+      verified: false
+      basis: BUILD_PROMPT.md says legacy economy tables stop at 2021.
+    groups:
+      - {group: "All households", table: B19080}
+    components:
+      q1: ["001"]
+      q2: ["002"]
+      q3: ["003"]
+      q4: ["004"]
+      top5: ["005"]
+    measures:
+      - {id: quintile_1_upper_limit, label: "Upper limit of the lowest-income fifth of households (dollars)", type: value, unit: dollars, component: q1, note: "In that survey year's dollars, not adjusted for inflation."}
+      - {id: quintile_2_upper_limit, label: "Upper limit of the second fifth (dollars)", type: value, unit: dollars, component: q2, note: "In that survey year's dollars, not adjusted for inflation."}
+      - {id: quintile_3_upper_limit, label: "Upper limit of the middle fifth (dollars)", type: value, unit: dollars, component: q3, note: "In that survey year's dollars, not adjusted for inflation."}
+      - {id: quintile_4_upper_limit, label: "Upper limit of the fourth fifth (dollars)", type: value, unit: dollars, component: q4, note: "In that survey year's dollars, not adjusted for inflation."}
+      - {id: top_5_percent_lower_limit, label: "Lower limit of the top 5% of households (dollars)", type: value, unit: dollars, component: top5, note: "In that survey year's dollars, not adjusted for inflation."}
+    checks:
+      ordered:
+        - {components: [q1, q2, q3, q4, top5]}
+    notes: >-
+      Each value is an income cut-off: for example, 20% of households earn
+      less than the first value. B19080 has no 2009 5-year release.
+
+  - id: homeownership_by_age
+    status: active
+    name: Homeownership by age of householder
+    vital_condition: Humane Housing
+    source: acs
+    surveys: [acs1, acs5]
+    geographies: [county]
+    universe: Occupied housing units (households)
+    disaggregations: [age, tenure]
+    legacy_vintage:
+      label: "2021 ACS"
+      year: 2021
+      survey: acs1
+      verified: false
+      basis: BUILD_PROMPT.md says legacy housing tables stop at 2021.
+    groups:
+      - {group: "All ages",                    table: B25007, components: {owner: ["002"], renter: ["012"], total: ["001"]}}
+      - {group: "Householder under 25 (15 to 24)", table: B25007, components: {owner: ["003"], renter: ["013"], total: ["003", "013"]}}
+      - {group: "Householder 25 to 34",        table: B25007, components: {owner: ["004"], renter: ["014"], total: ["004", "014"]}}
+      - {group: "Householder 35 to 44",        table: B25007, components: {owner: ["005"], renter: ["015"], total: ["005", "015"]}}
+      - {group: "Householder 45 to 54",        table: B25007, components: {owner: ["006"], renter: ["016"], total: ["006", "016"]}}
+      - {group: "Householder 55 to 59",        table: B25007, components: {owner: ["007"], renter: ["017"], total: ["007", "017"]}}
+      - {group: "Householder 60 to 64",        table: B25007, components: {owner: ["008"], renter: ["018"], total: ["008", "018"]}}
+      - {group: "Householder 65 to 74",        table: B25007, components: {owner: ["009"], renter: ["019"], total: ["009", "019"]}}
+      - {group: "Householder 75 to 84",        table: B25007, components: {owner: ["010"], renter: ["020"], total: ["010", "020"]}}
+      - {group: "Householder 85 and over",     table: B25007, components: {owner: ["011"], renter: ["021"], total: ["011", "021"]}}
+    measures:
+      - {id: occupied_households, label: "Households (occupied housing units)", type: count, component: total}
+      - {id: owner_households,    label: "Owner-occupied households",           type: count, component: owner}
+      - {id: renter_households,   label: "Renter-occupied households",          type: count, component: renter}
+      - {id: homeownership_rate,  label: "Homeownership rate (% of households that own their home)", type: percent, numerator: owner, denominator: total}
+    checks:
+      parts_equal_total:
+        - {parts: [owner, renter], total: total}
+      subgroups_sum_to_total:
+        total_group: "All ages"
+        components: [total, owner, renter]
+        groups:
+          - "Householder under 25 (15 to 24)"
+          - "Householder 25 to 34"
+          - "Householder 35 to 44"
+          - "Householder 45 to 54"
+          - "Householder 55 to 59"
+          - "Householder 60 to 64"
+          - "Householder 65 to 74"
+          - "Householder 75 to 84"
+          - "Householder 85 and over"
+    notes: >-
+      Age is the age of the householder (the person in whose name the home is
+      owned or rented). Household counts for an age band add owners and
+      renters, so their MOE is combined with moe_sum.
+
+  - id: labor_force_participation
+    status: active
+    name: Labor force participation, employment and unemployment
+    vital_condition: Meaningful Work & Wealth
+    source: acs
+    surveys: [acs1, acs5]
+    # S2301 variable numbers were reorganised in 2015 (C02 changed from a
+    # count to a rate), so only 2015 onward is comparable.
+    first_year: {acs1: 2015, acs5: 2015}
+    geographies: [county]
+    universe: Population 16 years and over (sex and parent groups are ages 20 to 64)
+    disaggregations: [race_ethnicity, sex]
+    legacy_vintage:
+      label: "2021 ACS"
+      year: 2021
+      survey: acs1
+      verified: false
+      basis: BUILD_PROMPT.md says legacy economy tables stop at 2021.
+    groups:
+      - {group: "All people 16 and over",                         table: S2301, components: {lfpr: ["C02_001"], epop: ["C03_001"], unemp: ["C04_001"]}}
+      - {group: "White alone",                                    table: S2301, components: {lfpr: ["C02_012"], epop: ["C03_012"], unemp: ["C04_012"]}}
+      - {group: "Black or African American alone",                table: S2301, components: {lfpr: ["C02_013"], epop: ["C03_013"], unemp: ["C04_013"]}}
+      - {group: "American Indian and Alaska Native alone",        table: S2301, components: {lfpr: ["C02_014"], epop: ["C03_014"], unemp: ["C04_014"]}}
+      - {group: "Asian alone",                                    table: S2301, components: {lfpr: ["C02_015"], epop: ["C03_015"], unemp: ["C04_015"]}}
+      - {group: "Native Hawaiian and Other Pacific Islander alone", table: S2301, components: {lfpr: ["C02_016"], epop: ["C03_016"], unemp: ["C04_016"]}}
+      - {group: "Some other race alone",                          table: S2301, components: {lfpr: ["C02_017"], epop: ["C03_017"], unemp: ["C04_017"]}}
+      - {group: "Two or more races",                              table: S2301, components: {lfpr: ["C02_018"], epop: ["C03_018"], unemp: ["C04_018"]}}
+      - {group: "Hispanic or Latino (any race)",                  table: S2301, components: {lfpr: ["C02_019"], epop: ["C03_019"], unemp: ["C04_019"]}}
+      - {group: "White alone, not Hispanic or Latino",            table: S2301, components: {lfpr: ["C02_020"], epop: ["C03_020"], unemp: ["C04_020"]}}
+      - {group: "Men 20 to 64",                                   table: S2301, components: {lfpr: ["C02_022"], epop: ["C03_022"], unemp: ["C04_022"]}}
+      - {group: "Women 20 to 64",                                 table: S2301, components: {lfpr: ["C02_023"], epop: ["C03_023"], unemp: ["C04_023"]}}
+      - {group: "Women 20 to 64 with children under 6 only",      table: S2301, components: {lfpr: ["C02_025"], epop: ["C03_025"], unemp: ["C04_025"]}}
+    measures:
+      - {id: labor_force_participation_rate, label: "Labor force participation rate (% working or looking for work)", type: value, unit: percent, component: lfpr}
+      - {id: employment_population_ratio,    label: "Employment-population ratio (% employed)", type: value, unit: percent, component: epop}
+      - {id: unemployment_rate,              label: "Unemployment rate (% of the labor force without a job and looking)", type: value, unit: percent, component: unemp}
+    notes: >-
+      Rates are published directly by the Census Bureau in subject table S2301,
+      with their own margins of error. Sex groups and the parent group cover
+      ages 20 to 64. The ACS asks about sex as male or female only, so
+      gender-expansive residents are not visible here.
+
+  - id: housing_cost_burden
+    status: active
+    name: Households paying 30% or more (and 50% or more) of income on housing
+    vital_condition: Humane Housing
+    source: acs
+    surveys: [acs1, acs5]
+    geographies: [county, tract]
+    universe: Renter- and owner-occupied housing units where cost as a share of income can be computed
+    disaggregations: [tenure]
+    legacy_vintage:
+      label: "2021 ACS"
+      year: 2021
+      survey: acs1
+      verified: false
+      basis: BUILD_PROMPT.md says legacy housing tables stop at 2021.
+    groups:
+      - group: "Renter households"
+        table: B25070
+        components:
+          burden30: ["007", "008", "009", "010"]
+          burden50: ["010"]
+          computed: ["002", "003", "004", "005", "006", "007", "008", "009", "010"]
+      - group: "Owner households with a mortgage"
+        table: B25091
+        components:
+          burden30: ["008", "009", "010", "011"]
+          burden50: ["011"]
+          computed: ["003", "004", "005", "006", "007", "008", "009", "010", "011"]
+      - group: "Owner households without a mortgage"
+        table: B25091
+        components:
+          burden30: ["019", "020", "021", "022"]
+          burden50: ["022"]
+          computed: ["014", "015", "016", "017", "018", "019", "020", "021", "022"]
+      - group: "All owner households"
+        table: B25091
+        components:
+          burden30: ["008", "009", "010", "011", "019", "020", "021", "022"]
+          burden50: ["011", "022"]
+          computed: ["003", "004", "005", "006", "007", "008", "009", "010", "011",
+                     "014", "015", "016", "017", "018", "019", "020", "021", "022"]
+    measures:
+      - {id: households_cost_computed,      label: "Households where housing cost as a share of income can be computed", type: count, component: computed}
+      - {id: cost_burdened_households,      label: "Households paying 30% or more of income on housing", type: count, component: burden30}
+      - {id: severely_burdened_households,  label: "Households paying 50% or more of income on housing", type: count, component: burden50}
+      - {id: pct_cost_burdened,             label: "% of households paying 30% or more of income on housing", type: percent, numerator: burden30, denominator: computed}
+      - {id: pct_severely_burdened,         label: "% of households paying 50% or more of income on housing", type: percent, numerator: burden50, denominator: computed}
+    checks:
+      subgroups_sum_to_total:
+        total_group: "All owner households"
+        components: [computed, burden30, burden50]
+        groups:
+          - "Owner households with a mortgage"
+          - "Owner households without a mortgage"
+    notes: >-
+      Renters use gross rent (rent plus utilities); owners use selected monthly
+      owner costs. Households with no income or no cash rent are left out
+      ("not computed"). Counts that combine several Census categories have
+      their MOE combined with moe_sum.
+
+  - id: households_without_vehicle
+    status: active
+    name: Households without a vehicle
+    vital_condition: Reliable Transportation
+    source: acs
+    surveys: [acs1, acs5]
+    first_year: {acs5: 2010}
+    geographies: [county, tract]
+    universe: Households
+    disaggregations: []
+    legacy_vintage:
+      label: "unknown"
+      year: null
+      survey: null
+      verified: false
+      basis: Not stated in BUILD_PROMPT.md.
+    groups:
+      - {group: "All households", table: B08201}
+    components:
+      total: ["001"]
+      none: ["002"]
+    measures:
+      - {id: households,                 label: "Households", type: count, component: total}
+      - {id: households_no_vehicle,      label: "Households with no vehicle available", type: count, component: none}
+      - {id: pct_households_no_vehicle,  label: "% of households with no vehicle available", type: percent, numerator: none, denominator: total}
+    notes: B08201 has no 2009 5-year release.
+
+  - id: poverty
+    status: active
+    name: People living below the poverty line
+    vital_condition: Basic Needs for Health & Safety
+    source: acs
+    surveys: [acs1, acs5]
+    geographies: [county, tract]
+    universe: People for whom poverty status is determined
+    disaggregations: [race_ethnicity, age]
+    legacy_vintage:
+      label: "unknown"
+      year: null
+      survey: null
+      verified: false
+      basis: Not stated in BUILD_PROMPT.md.
+    groups:
+      - {group: "All people",                                   table: B17001}
+      - {group: "White alone",                                  table: B17001A}
+      - {group: "Black or African American alone",              table: B17001B}
+      - {group: "American Indian and Alaska Native alone",      table: B17001C}
+      - {group: "Asian alone",                                  table: B17001D}
+      - {group: "Native Hawaiian and Other Pacific Islander alone", table: B17001E}
+      - {group: "Some other race alone",                        table: B17001F}
+      - {group: "Two or more races",                            table: B17001G}
+      - {group: "White alone, not Hispanic or Latino",          table: B17001H}
+      - {group: "Hispanic or Latino (any race)",                table: B17001I}
+      - group: "Children under 18"
+        table: B17001
+        components:
+          below: ["004", "005", "006", "007", "008", "009", "018", "019", "020", "021", "022", "023"]
+          total: ["004", "005", "006", "007", "008", "009", "018", "019", "020", "021", "022", "023",
+                  "033", "034", "035", "036", "037", "038", "047", "048", "049", "050", "051", "052"]
+      - group: "Adults 65 and over"
+        table: B17001
+        components:
+          below: ["015", "016", "029", "030"]
+          total: ["015", "016", "029", "030", "044", "045", "058", "059"]
+    components:
+      total: ["001"]
+      below: ["002"]
+    measures:
+      - {id: people_poverty_universe, label: "People whose poverty status is known", type: count, component: total}
+      - {id: people_below_poverty,    label: "People below the poverty line", type: count, component: below}
+      - {id: poverty_rate,            label: "Poverty rate (% of people below the poverty line)", type: percent, numerator: below, denominator: total}
+    checks:
+      subgroups_sum_to_total:
+        total_group: "All people"
+        components: [total, below]
+        groups:
+          - "White alone"
+          - "Black or African American alone"
+          - "American Indian and Alaska Native alone"
+          - "Asian alone"
+          - "Native Hawaiian and Other Pacific Islander alone"
+          - "Some other race alone"
+          - "Two or more races"
+    notes: >-
+      Uses the official federal poverty thresholds, which do not vary by local
+      cost of living. People in group quarters such as dorms and prisons, and
+      unrelated children under 15, are not in the universe.
+
+  - id: young_children_and_working_parents
+    status: active
+    name: Young children and children whose parents all work
+    vital_condition: Lifelong Learning
+    source: acs
+    surveys: [acs1, acs5]
+    geographies: [county, tract]
+    universe: Children under 6 living with one or two parents (B23008); children under 5 in households (B09001)
+    disaggregations: []
+    legacy_vintage:
+      label: "unknown"
+      year: null
+      survey: null
+      verified: false
+      basis: New indicator for the childcare module; not on the legacy site as far as known.
+    groups:
+      - group: "All children"
+        table: B09001
+        components:
+          under5: ["003", "004"]
+          under6_with_parents: ["B23008_002"]
+          under6_all_parents_working: ["B23008_004", "B23008_010", "B23008_013"]
+    measures:
+      - {id: children_under_5, label: "Children under 5 (in households)", type: count, component: under5}
+      - {id: children_under_6_with_parents, label: "Children under 6 living with one or two parents", type: count, component: under6_with_parents}
+      - {id: children_under_6_all_parents_working, label: "Children under 6 whose parents are all in the labor force", type: count, component: under6_all_parents_working}
+      - {id: pct_under_6_all_parents_working, label: "% of children under 6 whose parents are all in the labor force", type: percent, numerator: under6_all_parents_working, denominator: under6_with_parents}
+    notes: >-
+      "All parents in the labor force" means both parents in two-parent
+      families, or the one parent in one-parent families, are working or
+      looking for work. It is the demand side of the childcare module.
+      Family, friend and neighbor caregivers are not counted anywhere here.
+
+  - id: median_family_income
+    status: active
+    name: Median family income by race and ethnicity of householder
+    vital_condition: Meaningful Work & Wealth
+    source: acs
+    surveys: [acs1, acs5]
+    geographies: [county, tract]
+    universe: Families
+    disaggregations: [race_ethnicity]
+    legacy_vintage:
+      label: "unknown"
+      year: null
+      survey: null
+      verified: false
+      basis: Used by the childcare module; legacy vintage not known.
+    groups:
+      - {group: "All families",                                 table: B19113}
+      - {group: "White alone",                                  table: B19113A}
+      - {group: "Black or African American alone",              table: B19113B}
+      - {group: "American Indian and Alaska Native alone",      table: B19113C}
+      - {group: "Asian alone",                                  table: B19113D}
+      - {group: "Native Hawaiian and Other Pacific Islander alone", table: B19113E}
+      - {group: "Some other race alone",                        table: B19113F}
+      - {group: "Two or more races",                            table: B19113G}
+      - {group: "White alone, not Hispanic or Latino",          table: B19113H}
+      - {group: "Hispanic or Latino (any race)",                table: B19113I}
+    components:
+      median: ["001"]
+    measures:
+      - id: median_family_income
+        label: "Median family income (dollars)"
+        type: value
+        unit: dollars
+        component: median
+        note: "In that survey year's dollars, not adjusted for inflation."
+
+  # ---- PUMS microdata (built by R/pums.R; groups and measures are fixed there).
 
   - id: child_housing_cost_burden
-    status: planned
+    status: active
     name: Children in households paying 30% or more (and 50% or more) of income on housing
     vital_condition: Humane Housing
     source: pums
@@ -104,72 +502,4 @@ indicators:
     universe: Children under 18 in households
     disaggregations: [race_ethnicity, tenure]
     legacy_vintage: {label: "2015-2019 ACS 5-year PUMS", year: 2019, survey: acs5, verified: false, basis: "BUILD_PROMPT.md"}
-    notes: Built from PUMS microdata with replicate weights (milestone 3). PUMAs approximate the county.
-
-  - id: median_household_income
-    status: planned
-    name: Median household income
-    vital_condition: Meaningful Work & Wealth
-    source: acs
-    tables: [S1903]
-    universe: Households
-    disaggregations: [race_ethnicity]
-    legacy_vintage: {label: "2021 ACS", year: 2021, survey: acs1, verified: false, basis: "BUILD_PROMPT.md"}
-
-  - id: household_income_quintiles
-    status: planned
-    name: Household income quintile upper limits
-    vital_condition: Meaningful Work & Wealth
-    source: acs
-    tables: [B19080]
-    universe: Households
-    legacy_vintage: {label: "2021 ACS", year: 2021, survey: acs1, verified: false, basis: "BUILD_PROMPT.md"}
-
-  - id: homeownership_by_age
-    status: planned
-    name: Homeownership by age of householder
-    vital_condition: Humane Housing
-    source: acs
-    tables: [B25007]
-    universe: Occupied housing units
-    disaggregations: [age, tenure]
-    legacy_vintage: {label: "2021 ACS", year: 2021, survey: acs1, verified: false, basis: "BUILD_PROMPT.md"}
-
-  - id: labor_force_participation
-    status: planned
-    name: Employment and labor force participation
-    vital_condition: Meaningful Work & Wealth
-    source: acs
-    tables: [S2301]
-    universe: Population 16 years and over
-    disaggregations: [race_ethnicity, sex, age]
-    legacy_vintage: {label: "2021 ACS", year: 2021, survey: acs1, verified: false, basis: "BUILD_PROMPT.md"}
-
-  - id: housing_cost_burden
-    status: planned
-    name: Households paying 30% or more of income on housing (renters and owners)
-    vital_condition: Humane Housing
-    source: acs
-    tables: [B25070, B25091]
-    universe: Renter-occupied and owner-occupied housing units
-    disaggregations: [tenure]
-    legacy_vintage: {label: "2021 ACS", year: 2021, survey: acs1, verified: false, basis: "BUILD_PROMPT.md"}
-
-  - id: households_without_vehicle
-    status: planned
-    name: Households without a vehicle
-    vital_condition: Reliable Transportation
-    source: acs
-    tables: [B08201]
-    universe: Households
-    legacy_vintage: {label: "unknown", year: null, survey: null, verified: false, basis: "Not stated in BUILD_PROMPT.md"}
-
-  - id: poverty_rate
-    status: planned
-    name: People living below the poverty line
-    vital_condition: Basic Needs for Health & Safety
-    source: acs
-    tables: [B17001]
-    universe: Population for whom poverty status is determined
-    disaggregations: [age, sex]
-    legacy_vintage: {label: "unknown", year: null, survey: null, verified: false, basis: "Not stated in BUILD_PROMPT.md"}
+    notes: Built from PUMS microdata with replicate weights (milestone 3). The three PUMAs together cover exactly Forsyth County.

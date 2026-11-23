@@ -31,7 +31,7 @@ classify_reliability <- function(estimate, moe, cv, base, rel_cfg) {
     is.na(estimate) ~ "suppress",
     !is.na(base) & base < rel_cfg$min_denominator ~ "suppress",
     estimate == 0 ~ "suppress",
-    is.na(moe) ~ "reliable",               # no sampling error published
+    is.na(moe) ~ "use_with_caution",       # no MOE published (top-coded or controlled)
     cv < rel_cfg$reliable_cv_max ~ "reliable",
     cv <= rel_cfg$caution_cv_max ~ "use_with_caution",
     TRUE ~ "suppress"
@@ -44,7 +44,7 @@ reliability_note <- function(estimate, moe, cv, base, rel_cfg) {
     !is.na(base) & base < rel_cfg$min_denominator ~
       paste0("Based on fewer than ", rel_cfg$min_denominator, " cases; too small to report."),
     estimate == 0 ~ "Estimate is zero, so its reliability cannot be measured.",
-    is.na(moe) ~ "Census publishes no margin of error for this estimate (controlled or complete count).",
+    is.na(moe) ~ "Census publishes no margin of error for this value (it may be top- or bottom-coded, e.g. a median above $250,000); use with caution.",
     cv < rel_cfg$reliable_cv_max ~ NA_character_,
     cv <= rel_cfg$caution_cv_max ~ sprintf("CV %.1f%%: use with caution.", cv),
     TRUE ~ sprintf("CV %.1f%%: too uncertain to report.", cv)

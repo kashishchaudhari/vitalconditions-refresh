@@ -61,6 +61,15 @@ fixture_raw <- function(spec, vintages = fixture_vintages(), tracts = fixture_tr
   })
 }
 
+#' Fake Census labels: the same label for a variable in every year.
+fixture_labels <- function(spec, vintages = fixture_vintages()) {
+  vars <- indicator_variables(spec) |> dplyr::distinct(table, variable, component)
+  plan <- dplyr::filter(vintages, available) |> dplyr::distinct(survey, year)
+  tidyr::expand_grid(plan, vars) |>
+    dplyr::mutate(label = paste0("Estimate!!Total:!!", component, " (", table, ")")) |>
+    dplyr::select(survey, year, table, variable, label)
+}
+
 #' A fake direct API fetch that answers from the fixture raw data.
 fixture_fetch <- function(raw) {
   function(variables, survey, year, geography, area) {
@@ -80,7 +89,7 @@ fixture_run <- function(corrupt = identity) {
   path <- write_indicator_csv(tbl, cfg$pipeline)
   # Corrupt the written output file, as an analyst's slip or a bug might.
   readr::write_csv(corrupt(read_output_csv(path)), path, na = "")
-  checks <- run_indicator_checks(spec, path, raw, fixture_vintages(), fixture_tracts(),
+  checks <- run_indicator_checks(spec, path, raw, fixture_labels(spec), fixture_vintages(), fixture_tracts(),
                                  cfg$pipeline, cfg$validation, fetch = fixture_fetch(raw))
   list(cfg = cfg, spec = spec, raw = raw, path = path, checks = checks)
 }
