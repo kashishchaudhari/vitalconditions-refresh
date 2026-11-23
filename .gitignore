@@ -1,0 +1,31 @@
+# Secrets
+.Renviron
+.env
+*.key
+
+# R
+.Rhistory
+.RData
+.Rproj.user/
+*.Rproj
+renv/library/
+renv/staging/
+renv/local/
+
+# targets pipeline store
+_targets/
+
+# Quarto
+/.quarto/
+_site/
+*_files/
+
+# Data caches
+data/cache/
+data/raw/
+*.zip
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
