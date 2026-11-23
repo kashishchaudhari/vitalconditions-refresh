@@ -27,10 +27,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: System libraries for sf / spatial packages
+      - name: System libraries for R packages
         run: |
           sudo apt-get update
-          sudo apt-get install -y libgdal-dev libgeos-dev libproj-dev libudunits2-dev libsqlite3-dev
+          # sf/spatial, plus what renv reports for the lockfile (igraph needs glpk)
+          sudo apt-get install -y libgdal-dev gdal-bin libgeos-dev libproj-dev libudunits2-dev             libsqlite3-dev libglpk-dev libcurl4-openssl-dev libuv1-dev libx11-dev cmake pandoc
 
       - uses: r-lib/actions/setup-r@v2
         with:
